@@ -1,7 +1,7 @@
 package main
 
 import (
-	"encoding/json"
+	"EH_downloader/eh"
 	"fmt"
 	"github.com/gocolly/colly/v2"
 	"github.com/spf13/cast"
@@ -15,61 +15,6 @@ import (
 	"sync"
 	"time"
 )
-
-func ErrorCheck(err error) {
-	if err != nil {
-		log.Fatal(err)
-	}
-}
-
-func ToSafeFilename(in string) string {
-	//https://stackoverflow.com/questions/1976007/what-characters-are-forbidden-in-windows-and-linux-directory-names
-	//全部替换为_
-	rp := strings.NewReplacer(
-		"/", "_",
-		`\`, "_",
-		"<", "_",
-		">", "_",
-		":", "_",
-		`"`, "_",
-		"|", "_",
-		"?", "_",
-		"*", "_",
-	)
-	rt := rp.Replace(in)
-	return rt
-}
-
-func initCollector() *colly.Collector {
-	c := colly.NewCollector(
-		//这次在colly.NewCollector里面加了一项colly.Async(true)，表示抓取时异步的
-		//colly.Async(true),
-		//允许重复访问
-		//colly.AllowURLRevisit(),
-		//模拟浏览器
-		colly.UserAgent(`Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.82`),
-	)
-	//限制采集规格
-	rule := &colly.LimitRule{
-		RandomDelay: 5 * time.Second,
-		Parallelism: 5, //并发数
-	}
-	_ = c.Limit(rule)
-
-	c.OnRequest(func(r *colly.Request) {
-		log.Println("Visiting", r.URL)
-	})
-
-	c.OnError(func(_ *colly.Response, err error) {
-		log.Fatal("Something went wrong:", err)
-	})
-
-	//c.OnResponse(func(r *colly.Response) {
-	//	log.Println("Visited", r.Request.URL)
-	//	//fmt.Println(string(r.Body))
-	//})
-	return c
-}
 
 func getGalleryInfo(c *colly.Collector, galleryUrl string) (string, int) {
 	var title string
@@ -146,18 +91,18 @@ func getImageUrl(c *colly.Collector, imagePageUrl string) string {
 	return imageUrl
 }
 
-// SaveImages 保存imageDataList中的所有图片，imageDataList中的每个元素都是一个map，包含两个键值对，imageName和imageUrl
-func SaveImages(baseCollector *colly.Collector, imageDataList []map[string]string, saveDir string) error {
+// saveImages 保存imageDataList中的所有图片，imageDataList中的每个元素都是一个map，包含两个键值对，imageName和imageUrl
+func saveImages(baseCollector *colly.Collector, imageDataList []map[string]string, saveDir string) error {
 	dir, err := filepath.Abs(saveDir)
 	err = os.MkdirAll(dir, os.ModePerm)
-	ErrorCheck(err)
+	eh.ErrorCheck(err)
 
 	// 定义回调函数
 	onResponse := func(imagePath, imageName string) func(r *colly.Response) {
 		return func(r *colly.Response) {
 			filePath, err := filepath.Abs(filepath.Join(imagePath, imageName))
-			ErrorCheck(err)
-			err = SaveFile(filePath, r.Body)
+			eh.ErrorCheck(err)
+			err = eh.SaveFile(filePath, r.Body)
 			if err != nil {
 				fmt.Println("Error saving image:", err)
 			} else {
@@ -168,7 +113,6 @@ func SaveImages(baseCollector *colly.Collector, imageDataList []map[string]strin
 
 	// 创建一个 WaitGroup，以便等待所有 goroutines 完成
 	var wg sync.WaitGroup
-
 	for _, imageData := range imageDataList {
 		wg.Add(1)
 
@@ -192,90 +136,12 @@ func SaveImages(baseCollector *colly.Collector, imageDataList []map[string]strin
 	return nil
 }
 
-// SaveFile 用于保存文件
-func SaveFile(filePath string, data []byte) error {
-	file, err := os.Create(filePath)
-	//fmt.Println(filePath)
-	if err != nil {
-		return err
-	}
-	defer func(file *os.File) {
-		err := file.Close()
-		ErrorCheck(err)
-	}(file)
-
-	_, err = file.Write(data)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// buildCache 用于生成utf-8格式的图片列表缓存文件
-func buildCache(saveDir string, cacheFile string, imageDataList []map[string]string) error {
-	dir, err := filepath.Abs(saveDir)
-	err = os.MkdirAll(dir, os.ModePerm)
-	ErrorCheck(err)
-
-	// 打开文件用于写入数据
-	file, err := os.Create(filepath.Join(dir, cacheFile))
-	if err != nil {
-		fmt.Println("File creation error:", err)
-		return err
-	}
-	defer func(file *os.File) {
-		err := file.Close()
-		ErrorCheck(err)
-	}(file)
-
-	// 创建 JSON 编码器，并指定输出流为文件
-	encoder := json.NewEncoder(file)
-	// 设置编码器的输出流为 UTF-8
-	encoder.SetIndent("", "    ") // 设置缩进，可选
-	encoder.SetEscapeHTML(false)  // 禁用转义 HTML
-	err = encoder.Encode(imageDataList)
-	if err != nil {
-		fmt.Println("JSON encoding error:", err)
-		return err
-	}
-
-	return nil
-}
-
-func loadCache(filePath string) ([]map[string]string, error) {
-	var imageDataList []map[string]string
-	// 打开utf-8文件用于读取数据
-	file, err := os.Open(filePath)
-	if err != nil {
-		fmt.Println("File open error:", err)
-		return nil, err
-	}
-	defer func(file *os.File) {
-		err := file.Close()
-		ErrorCheck(err)
-	}(file)
-	// 创建 JSON 解码器
-	decoder := json.NewDecoder(file)
-	// 设置解码器的输入流为 UTF-8
-	err = decoder.Decode(&imageDataList)
-	if err != nil {
-		return nil, err
-	}
-	return imageDataList, nil
-}
-
 func buildImageInfo(imagePageUrl string) (string, string) {
 	imageIndex := imagePageUrl[strings.LastIndex(imagePageUrl, "-")+1:]
-	imageUrl := getImageUrl(initCollector(), imagePageUrl)
+	imageUrl := getImageUrl(eh.InitCollector(), imagePageUrl)
 	imageSuffix := imageUrl[strings.LastIndex(imageUrl, "."):]
 	imageName := fmt.Sprintf("%s%s", imageIndex, imageSuffix)
 	return imageName, imageUrl
-}
-
-func cacheFileExists(file string) bool {
-	_, err := os.Stat(file)
-	return err == nil || os.IsExist(err)
 }
 
 func main() {
@@ -299,17 +165,17 @@ func main() {
 	fmt.Println("Article Title:", title)
 	fmt.Println("Sum Image:", sumImage)
 
-	safeTitle := ToSafeFilename(title)
+	safeTitle := eh.ToSafeFilename(title)
 	fmt.Println(safeTitle)
 
 	//创建map{'imageName':imageName,'imageUrl':imageUrl}
 	var imageDataList []map[string]string
 	cachePath := filepath.Join(safeTitle, cacheFile)
-	if cacheFileExists(cachePath) {
-		imageDataList, _ = loadCache(cachePath)
+	if eh.CacheFileExists(cachePath) {
+		imageDataList, _ = eh.LoadCache(cachePath)
 	} else {
 		//重新初始化Collector
-		c = initCollector()
+		c = eh.InitCollector()
 		sumPage := int(math.Ceil(float64(sumImage) / float64(imageInOnepage)))
 		for i := beginIndex; i < sumPage; i++ {
 			fmt.Println("Current value:", i)
@@ -325,8 +191,8 @@ func main() {
 			}
 		}
 
-		err := buildCache(safeTitle, cacheFile, imageDataList)
-		ErrorCheck(err)
+		err := eh.BuildCache(safeTitle, cacheFile, imageDataList)
+		eh.ErrorCheck(err)
 	}
 
 	////测试用
@@ -336,8 +202,8 @@ func main() {
 	//}
 
 	// 进行图片批量保存
-	err := SaveImages(c, imageDataList, safeTitle)
-	ErrorCheck(err)
+	err := saveImages(c, imageDataList, safeTitle)
+	eh.ErrorCheck(err)
 
 	//记录结束时间
 	endTime := time.Now()
