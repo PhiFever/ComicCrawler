@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"github.com/spf13/cast"
 	"path/filepath"
 	"testing"
@@ -47,17 +48,27 @@ func TestToSafeFilename(t *testing.T) {
 	}
 }
 
+var imageDataList = []map[string]string{
+	{
+		"imageName": "1.jpg",
+		"imageUrl":  `https://th.bing.com/th/id/OIP.SQmqQt18WUcWYyuX8fGGGAHaE8?pid=ImgDet&rs=1`,
+	},
+	{
+		"imageName": "2.jpg",
+		"imageUrl":  `https://th.bing.com/th/id/OIP.6L7shpwxVAIr279rA0B1JQHaE7?pid=ImgDet&rs=1`,
+	},
+	{
+		"imageName": "3.jpg",
+		"imageUrl":  `https://th.bing.com/th/id/OIP.i242SBVfAPAhfxY5omlfgQHaLP?pid=ImgDet&rs=1`,
+	},
+	{
+		"imageName": "4.jpg",
+		"imageUrl":  `https://th.bing.com/th/id/OIP._0UYsgLTgJ8WAUYXFXKHRQHaEK?pid=ImgDet&rs=1`,
+	},
+}
+
 func TestSaveImages(t *testing.T) {
 	c := initCollector()
-	var imageDataList []map[string]string
-	imageDataList = append(imageDataList, map[string]string{
-		"imageName": "1.jpg",
-		//"imageUrl":  `https://klibhro.vutxylhuqpcu.hath.network/h/0831b75aa55ca2952676ac3ae86ca44bc5fe500a-718271-1280-1808-jpg/keystamp=1692102000-1766c97dab;fileindex=87912021;xres=1280/MJK_20_Z2477CE_1656_001.jpg`})
-		"imageUrl": `https://th.bing.com/th/id/OIP.SQmqQt18WUcWYyuX8fGGGAHaE8?pid=ImgDet&rs=1`})
-	imageDataList = append(imageDataList, map[string]string{
-		"imageName": "2.jpg",
-		//"imageUrl":  `https://jvqboaw.pkjrvmcjplqf.hath.network:2047/h/b48d7f5206c03b112d957184a44af44e8a3894ec-688714-1280-1808-jpg/keystamp=1692102000-1794e07515;fileindex=87912022;xres=1280/MJK_20_Z2477CE_1656_002.jpg`})
-		"imageUrl": `https://th.bing.com/th/id/OIP.6L7shpwxVAIr279rA0B1JQHaE7?pid=ImgDet&rs=1`})
 	saveDir := "test"
 	if SaveImages(c, imageDataList, saveDir) != nil {
 		t.Errorf("SaveImages() = %s; want nil", SaveImages(c, imageDataList, "test"))
@@ -75,18 +86,25 @@ func TestSaveFile(t *testing.T) {
 }
 
 func TestBuildCache(t *testing.T) {
-	var imageDataList []map[string]string
-	imageDataList = append(imageDataList, map[string]string{
-		"imageName": "1.jpg",
-		//"imageUrl":  `https://klibhro.vutxylhuqpcu.hath.network/h/0831b75aa55ca2952676ac3ae86ca44bc5fe500a-718271-1280-1808-jpg/keystamp=1692102000-1766c97dab;fileindex=87912021;xres=1280/MJK_20_Z2477CE_1656_001.jpg`})
-		"imageUrl": `https://th.bing.com/th/id/OIP.SQmqQt18WUcWYyuX8fGGGAHaE8?pid=ImgDet&rs=1`})
-	imageDataList = append(imageDataList, map[string]string{
-		"imageName": "2.jpg",
-		//"imageUrl":  `https://jvqboaw.pkjrvmcjplqf.hath.network:2047/h/b48d7f5206c03b112d957184a44af44e8a3894ec-688714-1280-1808-jpg/keystamp=1692102000-1794e07515;fileindex=87912022;xres=1280/MJK_20_Z2477CE_1656_002.jpg`})
-		"imageUrl": `https://th.bing.com/th/id/OIP.6L7shpwxVAIr279rA0B1JQHaE7?pid=ImgDet&rs=1`})
 	saveDir := "test"
-	err := buildCache(saveDir, imageDataList)
+	cacheFile := "cache.json"
+	err := buildCache(saveDir, cacheFile, imageDataList)
 	if err != nil {
 		t.Errorf("buildCache() = %s; want nil", err)
 	}
+}
+
+func TestLoadCache(t *testing.T) {
+	saveDir := "test"
+	cacheFile := "cache.json"
+	imageDataList, err := loadCache(filepath.Join(saveDir, cacheFile))
+	for _, data := range imageDataList {
+		fmt.Println(data["imageName"])
+		fmt.Println(data["imageUrl"])
+		fmt.Println(" ")
+	}
+	if err != nil {
+		t.Errorf("loadCache() = %s; want nil", err)
+	}
+
 }

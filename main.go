@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -50,8 +51,8 @@ func initCollector() *colly.Collector {
 	)
 	//限制采集规格
 	rule := &colly.LimitRule{
-		RandomDelay: time.Second,
-		Parallelism: 5, //并发数为10
+		RandomDelay: 5 * time.Second,
+		Parallelism: 5, //并发数
 	}
 	_ = c.Limit(rule)
 
@@ -145,6 +146,7 @@ func getImageUrl(c *colly.Collector, imagePageUrl string) string {
 	return imageUrl
 }
 
+// SaveImages 保存imageDataList中的所有图片，imageDataList中的每个元素都是一个map，包含两个键值对，imageName和imageUrl
 func SaveImages(baseCollector *colly.Collector, imageDataList []map[string]string, saveDir string) error {
 	dir, err := filepath.Abs(saveDir)
 	err = os.MkdirAll(dir, os.ModePerm)
@@ -164,23 +166,28 @@ func SaveImages(baseCollector *colly.Collector, imageDataList []map[string]strin
 		}
 	}
 
+	// 创建一个 WaitGroup，以便等待所有 goroutines 完成
+	var wg sync.WaitGroup
+
 	for _, imageData := range imageDataList {
-		imageName := imageData["imageName"]
-		imageUrl := imageData["imageUrl"]
+		wg.Add(1)
 
-		// 为每张图片创建一个 Collector
-		c := baseCollector.Clone()
-		// 设置回调函数
-		c.OnResponse(onResponse(dir, imageName))
-		// 使用 Colly 发起请求并保存图片
-		err := c.Visit(imageUrl)
-		if err != nil {
-			return err
-		}
-
+		go func(data map[string]string) {
+			defer wg.Done()
+			// 为每张图片创建一个 Collector
+			c := baseCollector.Clone()
+			// 设置回调函数
+			c.OnResponse(onResponse(dir, data["imageName"]))
+			// 使用 Colly 发起请求并保存图片
+			err := c.Visit(data["imageUrl"])
+			if err != nil {
+				fmt.Println("Error visiting URL:", err)
+			}
+		}(imageData)
 	}
 
-	baseCollector.Wait()
+	// 等待所有 goroutines 完成
+	wg.Wait()
 
 	return nil
 }
@@ -205,16 +212,14 @@ func SaveFile(filePath string, data []byte) error {
 	return nil
 }
 
-func buildCache(dir string, imageDataList []map[string]string) error {
-	// 将数据转换为 JSON 格式的字节切片
-	jsonData, err := json.Marshal(imageDataList)
-	if err != nil {
-		fmt.Println("JSON marshaling error:", err)
-		return err
-	}
+// buildCache 用于生成utf-8格式的图片列表缓存文件
+func buildCache(saveDir string, cacheFile string, imageDataList []map[string]string) error {
+	dir, err := filepath.Abs(saveDir)
+	err = os.MkdirAll(dir, os.ModePerm)
+	ErrorCheck(err)
 
 	// 打开文件用于写入数据
-	file, err := os.Create(filepath.Join(dir, "cache.json"))
+	file, err := os.Create(filepath.Join(dir, cacheFile))
 	if err != nil {
 		fmt.Println("File creation error:", err)
 		return err
@@ -224,13 +229,40 @@ func buildCache(dir string, imageDataList []map[string]string) error {
 		ErrorCheck(err)
 	}(file)
 
-	// 将 JSON 数据写入文件
-	_, err = file.Write(jsonData)
+	// 创建 JSON 编码器，并指定输出流为文件
+	encoder := json.NewEncoder(file)
+	// 设置编码器的输出流为 UTF-8
+	encoder.SetIndent("", "    ") // 设置缩进，可选
+	encoder.SetEscapeHTML(false)  // 禁用转义 HTML
+	err = encoder.Encode(imageDataList)
 	if err != nil {
-		fmt.Println("File write error:", err)
+		fmt.Println("JSON encoding error:", err)
 		return err
 	}
+
 	return nil
+}
+
+func loadCache(filePath string) ([]map[string]string, error) {
+	var imageDataList []map[string]string
+	// 打开utf-8文件用于读取数据
+	file, err := os.Open(filePath)
+	if err != nil {
+		fmt.Println("File open error:", err)
+		return nil, err
+	}
+	defer func(file *os.File) {
+		err := file.Close()
+		ErrorCheck(err)
+	}(file)
+	// 创建 JSON 解码器
+	decoder := json.NewDecoder(file)
+	// 设置解码器的输入流为 UTF-8
+	err = decoder.Decode(&imageDataList)
+	if err != nil {
+		return nil, err
+	}
+	return imageDataList, nil
 }
 
 func buildImageInfo(imagePageUrl string) (string, string) {
@@ -241,10 +273,16 @@ func buildImageInfo(imagePageUrl string) (string, string) {
 	return imageName, imageUrl
 }
 
+func cacheFileExists(file string) bool {
+	_, err := os.Stat(file)
+	return err == nil || os.IsExist(err)
+}
+
 func main() {
 	galleryUrl := "https://e-hentai.org/g/1838806/61460acecb/"
 	imageInOnepage := 40
 	beginIndex := 0
+	cacheFile := `cache.json`
 
 	//记录开始时间
 	startTime := time.Now()
@@ -264,30 +302,41 @@ func main() {
 	safeTitle := ToSafeFilename(title)
 	fmt.Println(safeTitle)
 
-	//重新初始化Collector
-	c = initCollector()
-	sumPage := int(math.Ceil(float64(sumImage) / float64(imageInOnepage)))
 	//创建map{'imageName':imageName,'imageUrl':imageUrl}
 	var imageDataList []map[string]string
-	for i := beginIndex; i < sumPage; i++ {
-		fmt.Println("Current value:", i)
-		indexUrl := generateIndexURL(galleryUrl, i)
-		fmt.Println(indexUrl)
-		imagePageUrls := getAllImagePageUrl(c, indexUrl)
-		for _, imagePageUrl := range imagePageUrls {
-			imageName, imageUrl := buildImageInfo(imagePageUrl)
-			imageDataList = append(imageDataList, map[string]string{
-				"imageName": imageName,
-				"imageUrl":  imageUrl,
-			})
+	cachePath := filepath.Join(safeTitle, cacheFile)
+	if cacheFileExists(cachePath) {
+		imageDataList, _ = loadCache(cachePath)
+	} else {
+		//重新初始化Collector
+		c = initCollector()
+		sumPage := int(math.Ceil(float64(sumImage) / float64(imageInOnepage)))
+		for i := beginIndex; i < sumPage; i++ {
+			fmt.Println("Current value:", i)
+			indexUrl := generateIndexURL(galleryUrl, i)
+			fmt.Println(indexUrl)
+			imagePageUrls := getAllImagePageUrl(c, indexUrl)
+			for _, imagePageUrl := range imagePageUrls {
+				imageName, imageUrl := buildImageInfo(imagePageUrl)
+				imageDataList = append(imageDataList, map[string]string{
+					"imageName": imageName,
+					"imageUrl":  imageUrl,
+				})
+			}
 		}
+
+		err := buildCache(safeTitle, cacheFile, imageDataList)
+		ErrorCheck(err)
 	}
 
-	err := buildCache(safeTitle, imageDataList)
-	ErrorCheck(err)
+	////测试用
+	//err := buildCache(`./`, cacheFile, imageDataList)
+	//if err != nil {
+	//	return
+	//}
 
-	// 调用封装好的函数进行图片批量保存
-	err = SaveImages(c, imageDataList, safeTitle)
+	// 进行图片批量保存
+	err := SaveImages(c, imageDataList, safeTitle)
 	ErrorCheck(err)
 
 	//记录结束时间
