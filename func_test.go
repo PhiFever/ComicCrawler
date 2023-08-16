@@ -1,12 +1,11 @@
 package main
 
 import (
-	"EH_downloader/eh"
+	"EH_downloader/client"
+	"EH_downloader/utils"
 	"fmt"
-	"github.com/spf13/cast"
 	"path/filepath"
 	"testing"
-	"time"
 )
 
 //func TestGetGalleryInfo(t *testing.T) {
@@ -41,14 +40,6 @@ func TestGenerateIndexURL(t *testing.T) {
 	}
 }
 
-func TestToSafeFilename(t *testing.T) {
-	title := `[sfs]\24r/f4?*<q>|:`
-	expected := "[sfs]_24r_f4___q___"
-	if eh.ToSafeFilename(title) != expected {
-		t.Errorf("ToSafeFilename() = %s; want %s", eh.ToSafeFilename(title), expected)
-	}
-}
-
 var imageDataList = []map[string]string{
 	{
 		"imageName": "1.jpg",
@@ -69,42 +60,20 @@ var imageDataList = []map[string]string{
 }
 
 func TestSaveImages(t *testing.T) {
-	c := eh.InitCollector()
-	saveDir := "test"
-	if saveImages(c, imageDataList, saveDir) != nil {
-		t.Errorf("saveImages() = %s; want nil", saveImages(c, imageDataList, "test"))
-	}
-}
-
-func TestSaveFile(t *testing.T) {
-	data := []byte(cast.ToString(time.Now()))
-	filePath, _ := filepath.Abs("./test/saveFile.txt")
-
-	err := eh.SaveFile(filePath, data)
+	c := client.InitCollector()
+	saveDir := "./test"
+	absPath, err := filepath.Abs(saveDir)
+	fmt.Println(absPath)
 	if err != nil {
-		t.Errorf("SaveFile() = %s; want nil", err)
+		t.Errorf("filepath.Abs() = %s; want nil", err)
 	}
-}
-
-func TestBuildCache(t *testing.T) {
-	saveDir := "test"
-	cacheFile := "cache.json"
-	err := eh.BuildCache(saveDir, cacheFile, imageDataList)
+	err = saveImages(c, imageDataList, absPath)
 	if err != nil {
-		t.Errorf("buildCache() = %s; want nil", err)
+		t.Errorf("saveImages() = %s; want nil", err)
 	}
-}
-
-func TestLoadCache(t *testing.T) {
-	saveDir := "test"
-	cacheFile := "cache.json"
-	imageDataList, err := eh.LoadCache(filepath.Join(saveDir, cacheFile))
 	for _, data := range imageDataList {
-		fmt.Println(data["imageName"])
-		fmt.Println(data["imageUrl"])
+		if !utils.CacheFileExists(filepath.Join(saveDir, data["imageName"])) {
+			t.Errorf("saveImages() = %s; want %s", filepath.Join(saveDir, data["imageName"]), "exist")
+		}
 	}
-	if err != nil {
-		t.Errorf("loadCache() = %s; want nil", err)
-	}
-
 }

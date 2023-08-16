@@ -1,4 +1,4 @@
-package eh
+package client
 
 import (
 	"github.com/gocolly/colly/v2"

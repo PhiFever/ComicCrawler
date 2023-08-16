@@ -1,4 +1,4 @@
-package eh
+package utils
 
 import (
 	"encoding/json"
@@ -106,7 +106,7 @@ func LoadCache(filePath string) ([]map[string]string, error) {
 	return imageDataList, nil
 }
 
-func CacheFileExists(file string) bool {
-	_, err := os.Stat(file)
+func CacheFileExists(filePath string) bool {
+	_, err := os.Stat(filePath)
 	return err == nil || os.IsExist(err)
 }

@@ -1,7 +1,8 @@
 package main
 
 import (
-	"EH_downloader/eh"
+	"EH_downloader/client"
+	"EH_downloader/utils"
 	"fmt"
 	"github.com/gocolly/colly/v2"
 	"github.com/spf13/cast"
@@ -12,7 +13,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
-	"sync"
 	"time"
 )
 
@@ -95,14 +95,14 @@ func getImageUrl(c *colly.Collector, imagePageUrl string) string {
 func saveImages(baseCollector *colly.Collector, imageDataList []map[string]string, saveDir string) error {
 	dir, err := filepath.Abs(saveDir)
 	err = os.MkdirAll(dir, os.ModePerm)
-	eh.ErrorCheck(err)
+	utils.ErrorCheck(err)
 
 	// 定义回调函数
 	onResponse := func(imagePath, imageName string) func(r *colly.Response) {
 		return func(r *colly.Response) {
 			filePath, err := filepath.Abs(filepath.Join(imagePath, imageName))
-			eh.ErrorCheck(err)
-			err = eh.SaveFile(filePath, r.Body)
+			utils.ErrorCheck(err)
+			err = utils.SaveFile(filePath, r.Body)
 			if err != nil {
 				fmt.Println("Error saving image:", err)
 			} else {
@@ -111,34 +111,26 @@ func saveImages(baseCollector *colly.Collector, imageDataList []map[string]strin
 		}
 	}
 
-	// 创建一个 WaitGroup，以便等待所有 goroutines 完成
-	var wg sync.WaitGroup
 	for _, imageData := range imageDataList {
-		wg.Add(1)
+		imageName := imageData["imageName"]
+		imageUrl := imageData["imageUrl"]
 
-		go func(data map[string]string) {
-			defer wg.Done()
-			// 为每张图片创建一个 Collector
-			c := baseCollector.Clone()
-			// 设置回调函数
-			c.OnResponse(onResponse(dir, data["imageName"]))
-			// 使用 Colly 发起请求并保存图片
-			err := c.Visit(data["imageUrl"])
-			if err != nil {
-				fmt.Println("Error visiting URL:", err)
-			}
-		}(imageData)
+		// 为每张图片创建一个 Collector
+		c := baseCollector.Clone()
+		// 设置回调函数
+		c.OnResponse(onResponse(dir, imageName))
+		// 使用 Colly 发起请求并保存图片
+		err := c.Visit(imageUrl)
+		if err != nil {
+			return err
+		}
 	}
-
-	// 等待所有 goroutines 完成
-	wg.Wait()
-
 	return nil
 }
 
 func buildImageInfo(imagePageUrl string) (string, string) {
 	imageIndex := imagePageUrl[strings.LastIndex(imagePageUrl, "-")+1:]
-	imageUrl := getImageUrl(eh.InitCollector(), imagePageUrl)
+	imageUrl := getImageUrl(client.InitCollector(), imagePageUrl)
 	imageSuffix := imageUrl[strings.LastIndex(imageUrl, "."):]
 	imageName := fmt.Sprintf("%s%s", imageIndex, imageSuffix)
 	return imageName, imageUrl
@@ -152,12 +144,12 @@ func main() {
 
 	//记录开始时间
 	startTime := time.Now()
-	c := colly.NewCollector(
+	collector := colly.NewCollector(
 		//模拟浏览器
 		colly.UserAgent(`Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36 Edg/115.0.1901.203`),
 	)
 
-	title, sumImage := getGalleryInfo(c, galleryUrl)
+	title, sumImage := getGalleryInfo(collector, galleryUrl)
 	if title == "" || sumImage == 0 {
 		log.Fatal("Invalid gallery url")
 	}
@@ -165,23 +157,25 @@ func main() {
 	fmt.Println("Article Title:", title)
 	fmt.Println("Sum Image:", sumImage)
 
-	safeTitle := eh.ToSafeFilename(title)
+	safeTitle := utils.ToSafeFilename(title)
 	fmt.Println(safeTitle)
 
 	//创建map{'imageName':imageName,'imageUrl':imageUrl}
 	var imageDataList []map[string]string
 	cachePath := filepath.Join(safeTitle, cacheFile)
-	if eh.CacheFileExists(cachePath) {
-		imageDataList, _ = eh.LoadCache(cachePath)
+
+	//重新初始化Collector
+	collector = client.InitCollector()
+	if utils.CacheFileExists(cachePath) {
+		fmt.Println("Cache file exists")
+		imageDataList, _ = utils.LoadCache(cachePath)
 	} else {
-		//重新初始化Collector
-		c = eh.InitCollector()
 		sumPage := int(math.Ceil(float64(sumImage) / float64(imageInOnepage)))
 		for i := beginIndex; i < sumPage; i++ {
 			fmt.Println("Current value:", i)
 			indexUrl := generateIndexURL(galleryUrl, i)
 			fmt.Println(indexUrl)
-			imagePageUrls := getAllImagePageUrl(c, indexUrl)
+			imagePageUrls := getAllImagePageUrl(collector, indexUrl)
 			for _, imagePageUrl := range imagePageUrls {
 				imageName, imageUrl := buildImageInfo(imagePageUrl)
 				imageDataList = append(imageDataList, map[string]string{
@@ -191,8 +185,8 @@ func main() {
 			}
 		}
 
-		err := eh.BuildCache(safeTitle, cacheFile, imageDataList)
-		eh.ErrorCheck(err)
+		err := utils.BuildCache(safeTitle, cacheFile, imageDataList)
+		utils.ErrorCheck(err)
 	}
 
 	////测试用
@@ -202,8 +196,8 @@ func main() {
 	//}
 
 	// 进行图片批量保存
-	err := saveImages(c, imageDataList, safeTitle)
-	eh.ErrorCheck(err)
+	err := saveImages(collector, imageDataList, safeTitle)
+	utils.ErrorCheck(err)
 
 	//记录结束时间
 	endTime := time.Now()
