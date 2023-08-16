@@ -133,7 +133,16 @@ func buildImageInfo(c *colly.Collector, imagePageUrl string) (string, string) {
 }
 
 func main() {
-	galleryUrl := "https://e-hentai.org/g/1838806/61460acecb/"
+	if len(os.Args) != 2 {
+		log.Fatalln("传参数目错误！请使用 ./eh_downloader.exe -h 命令查看使用参数说明。")
+	}
+	if len(os.Args) == 2 && (cast.ToString(os.Args[1]) == "help" || cast.ToString(os.Args[1]) == "-help" || cast.ToString(os.Args[1]) == "--help" || cast.ToString(os.Args[1]) == "-h") {
+		fmt.Println(`使用: ./eh_downloader.exe "gallery_url"`)
+		fmt.Println("选项与参数说明: ")
+		fmt.Println("gallery_url: 待下载的画廊地址")
+		os.Exit(0)
+	}
+	galleryUrl := cast.ToString(os.Args[1])
 	imageInOnepage := 40
 	beginIndex := 0
 
@@ -163,7 +172,7 @@ func main() {
 
 	sumPage := int(math.Ceil(float64(sumImage) / float64(imageInOnepage)))
 	for i := beginIndex; i < sumPage; i++ {
-		fmt.Println("Current value:", i)
+		fmt.Println("Current index:", i)
 		indexUrl := generateIndexURL(galleryUrl, i)
 		fmt.Println(indexUrl)
 		imagePageUrls := getAllImagePageUrl(collector, indexUrl)
