@@ -4,6 +4,7 @@ import (
 	"EH_downloader/client"
 	"EH_downloader/utils"
 	"fmt"
+	"net/http"
 	"path/filepath"
 	"testing"
 )
@@ -60,7 +61,11 @@ var imageDataList = []map[string]string{
 }
 
 func TestSaveImages(t *testing.T) {
-	c := client.InitCollector()
+	headers := make(http.Header)
+	headers.Set(`User-Agent`, `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.82`)
+	//headers.Set("Accept", "image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8")
+	//headers.Set("Upgrade-Insecure-Requests", "1")
+	c := client.InitCollector(headers)
 	saveDir := "./test"
 	absPath, err := filepath.Abs(saveDir)
 	fmt.Println(absPath)

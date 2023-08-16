@@ -8,6 +8,7 @@ import (
 	"github.com/spf13/cast"
 	"log"
 	"math"
+	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -97,40 +98,36 @@ func saveImages(baseCollector *colly.Collector, imageDataList []map[string]strin
 	err = os.MkdirAll(dir, os.ModePerm)
 	utils.ErrorCheck(err)
 
-	// 定义回调函数
-	onResponse := func(imagePath, imageName string) func(r *colly.Response) {
-		return func(r *colly.Response) {
-			filePath, err := filepath.Abs(filepath.Join(imagePath, imageName))
-			utils.ErrorCheck(err)
-			err = utils.SaveFile(filePath, r.Body)
-			if err != nil {
-				fmt.Println("Error saving image:", err)
-			} else {
-				fmt.Println("Image saved:", filePath)
-			}
-		}
-	}
-
-	for _, imageData := range imageDataList {
-		imageName := imageData["imageName"]
-		imageUrl := imageData["imageUrl"]
-
-		// 为每张图片创建一个 Collector
-		c := baseCollector.Clone()
-		// 设置回调函数
-		c.OnResponse(onResponse(dir, imageName))
-		// 使用 Colly 发起请求并保存图片
-		err := c.Visit(imageUrl)
+	i := 0
+	baseCollector.OnResponse(func(r *colly.Response) {
+		imageName := imageDataList[i]["imageName"]
+		//imageUrl := imageDataList[i]["imageUrl"]
+		filePath, err := filepath.Abs(filepath.Join(dir, imageName))
+		utils.ErrorCheck(err)
+		err = utils.SaveFile(filePath, r.Body)
 		if err != nil {
-			return err
+			fmt.Println("Error saving image:", err)
+		} else {
+			fmt.Println("Image saved:", filePath)
 		}
+		//fmt.Println("Current value:", i)
+		if i < len(imageDataList)-1 {
+			i++
+			err = baseCollector.Request("GET", imageDataList[i]["imageUrl"], nil, nil, nil)
+			utils.ErrorCheck(err)
+		}
+	})
+
+	err = baseCollector.Request("GET", imageDataList[i]["imageUrl"], nil, nil, nil)
+	if err != nil {
+		return err
 	}
 	return nil
 }
 
-func buildImageInfo(imagePageUrl string) (string, string) {
+func buildImageInfo(c *colly.Collector, imagePageUrl string) (string, string) {
 	imageIndex := imagePageUrl[strings.LastIndex(imagePageUrl, "-")+1:]
-	imageUrl := getImageUrl(client.InitCollector(), imagePageUrl)
+	imageUrl := getImageUrl(c, imagePageUrl)
 	imageSuffix := imageUrl[strings.LastIndex(imageUrl, "."):]
 	imageName := fmt.Sprintf("%s%s", imageIndex, imageSuffix)
 	return imageName, imageUrl
@@ -162,10 +159,18 @@ func main() {
 
 	//创建map{'imageName':imageName,'imageUrl':imageUrl}
 	var imageDataList []map[string]string
-	cachePath := filepath.Join(safeTitle, cacheFile)
+	//cachePath := filepath.Join(safeTitle, cacheFile)
+
+	//测试用
+	cachePath := filepath.Join("test", cacheFile)
 
 	//重新初始化Collector
-	collector = client.InitCollector()
+	headers := make(http.Header)
+	headers.Set(`User-Agent`, `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.82`)
+	headers.Set("Accept", "image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8")
+	headers.Set("Upgrade-Insecure-Requests", "1")
+	collector = client.InitCollector(headers)
+
 	if utils.CacheFileExists(cachePath) {
 		fmt.Println("Cache file exists")
 		imageDataList, _ = utils.LoadCache(cachePath)
@@ -177,7 +182,7 @@ func main() {
 			fmt.Println(indexUrl)
 			imagePageUrls := getAllImagePageUrl(collector, indexUrl)
 			for _, imagePageUrl := range imagePageUrls {
-				imageName, imageUrl := buildImageInfo(imagePageUrl)
+				imageName, imageUrl := buildImageInfo(collector, imagePageUrl)
 				imageDataList = append(imageDataList, map[string]string{
 					"imageName": imageName,
 					"imageUrl":  imageUrl,
