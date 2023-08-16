@@ -8,7 +8,6 @@ import (
 	"github.com/spf13/cast"
 	"log"
 	"math"
-	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -137,7 +136,6 @@ func main() {
 	galleryUrl := "https://e-hentai.org/g/1838806/61460acecb/"
 	imageInOnepage := 40
 	beginIndex := 0
-	cacheFile := `cache.json`
 
 	//记录开始时间
 	startTime := time.Now()
@@ -159,46 +157,24 @@ func main() {
 
 	//创建map{'imageName':imageName,'imageUrl':imageUrl}
 	var imageDataList []map[string]string
-	//cachePath := filepath.Join(safeTitle, cacheFile)
-
-	//测试用
-	cachePath := filepath.Join("test", cacheFile)
 
 	//重新初始化Collector
-	headers := make(http.Header)
-	headers.Set(`User-Agent`, `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.82`)
-	headers.Set("Accept", "image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8")
-	headers.Set("Upgrade-Insecure-Requests", "1")
-	collector = client.InitCollector(headers)
+	collector = client.InitCollector(client.BuildJpegHeaders())
 
-	if utils.CacheFileExists(cachePath) {
-		fmt.Println("Cache file exists")
-		imageDataList, _ = utils.LoadCache(cachePath)
-	} else {
-		sumPage := int(math.Ceil(float64(sumImage) / float64(imageInOnepage)))
-		for i := beginIndex; i < sumPage; i++ {
-			fmt.Println("Current value:", i)
-			indexUrl := generateIndexURL(galleryUrl, i)
-			fmt.Println(indexUrl)
-			imagePageUrls := getAllImagePageUrl(collector, indexUrl)
-			for _, imagePageUrl := range imagePageUrls {
-				imageName, imageUrl := buildImageInfo(collector, imagePageUrl)
-				imageDataList = append(imageDataList, map[string]string{
-					"imageName": imageName,
-					"imageUrl":  imageUrl,
-				})
-			}
+	sumPage := int(math.Ceil(float64(sumImage) / float64(imageInOnepage)))
+	for i := beginIndex; i < sumPage; i++ {
+		fmt.Println("Current value:", i)
+		indexUrl := generateIndexURL(galleryUrl, i)
+		fmt.Println(indexUrl)
+		imagePageUrls := getAllImagePageUrl(collector, indexUrl)
+		for _, imagePageUrl := range imagePageUrls {
+			imageName, imageUrl := buildImageInfo(collector, imagePageUrl)
+			imageDataList = append(imageDataList, map[string]string{
+				"imageName": imageName,
+				"imageUrl":  imageUrl,
+			})
 		}
-
-		err := utils.BuildCache(safeTitle, cacheFile, imageDataList)
-		utils.ErrorCheck(err)
 	}
-
-	////测试用
-	//err := buildCache(`./`, cacheFile, imageDataList)
-	//if err != nil {
-	//	return
-	//}
 
 	// 进行图片批量保存
 	err := saveImages(collector, imageDataList, safeTitle)
