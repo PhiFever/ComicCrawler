@@ -4,26 +4,31 @@ import (
 	"EH_downloader/client"
 	"EH_downloader/utils"
 	"fmt"
+	"github.com/gocolly/colly/v2"
 	"net/http"
 	"path/filepath"
 	"testing"
 )
 
-//func TestGetGalleryInfo(t *testing.T) {
-//	urlStr := "https://e-hentai.org/g/1838806/61460acecb/"
-//	c := colly.NewCollector()
-//	title, maxPage := getGalleryInfo(c, urlStr)
-//
-//	expectedTitle := "[Homunculus] Bye-Bye Sister (COMIC Kairakuten 2021-02) [Chinese] [CE家族社×無邪気無修宇宙分組] [Digital]"
-//	if title != expectedTitle {
-//		t.Errorf("getGalleryInfo() title = %s; want %s", title, expectedTitle)
-//	}
-//
-//	expectedMaxPage := 24
-//	if maxPage != expectedMaxPage {
-//		t.Errorf("getGalleryInfo() max_page = %d; want %d", maxPage, expectedMaxPage)
-//	}
-//}
+func TestGetGalleryInfo(t *testing.T) {
+	urlStr := "https://e-hentai.org/g/1838806/61460acecb/"
+	c := colly.NewCollector()
+	title, maxPage := getGalleryInfo(c, urlStr)
+
+	expectedTitle := "[Homunculus] Bye-Bye Sister (COMIC Kairakuten 2021-02) [Chinese] [CE家族社×無邪気無修宇宙分組] [Digital]"
+	expectedMaxPage := 24
+	if title != expectedTitle || maxPage != expectedMaxPage {
+		t.Errorf("getGalleryInfo() = %s, %d; want %s, %d", title, maxPage, expectedTitle, expectedMaxPage)
+	}
+
+	urlStr = "https://zhuanlan.zhihu.com/p/375530785"
+	title, maxPage = getGalleryInfo(c, urlStr)
+	expectedTitle = ""
+	expectedMaxPage = 0
+	if title != expectedTitle || maxPage != expectedMaxPage {
+		t.Errorf("getGalleryInfo() = %s, %d; want %s, %d", title, maxPage, expectedTitle, expectedMaxPage)
+	}
+}
 
 func TestGenerateIndexURL(t *testing.T) {
 	urlStr := "https://xxx/yyy"

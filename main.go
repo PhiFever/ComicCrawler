@@ -138,8 +138,11 @@ func main() {
 	}
 	if len(os.Args) == 2 && (cast.ToString(os.Args[1]) == "help" || cast.ToString(os.Args[1]) == "-help" || cast.ToString(os.Args[1]) == "--help" || cast.ToString(os.Args[1]) == "-h") {
 		fmt.Println(`使用: ./eh_downloader.exe "gallery_url"`)
+		fmt.Println()
+		fmt.Println("目的: 下载e-hentai.org指定画廊的所有图片")
+		fmt.Println()
 		fmt.Println("选项与参数说明: ")
-		fmt.Println("gallery_url: 待下载的画廊地址")
+		fmt.Println("gallery_url: 待下载的画廊地址，一般来说带不带双引号都可以。")
 		os.Exit(0)
 	}
 	galleryUrl := cast.ToString(os.Args[1])
@@ -155,7 +158,7 @@ func main() {
 
 	title, sumImage := getGalleryInfo(collector, galleryUrl)
 	if title == "" || sumImage == 0 {
-		log.Fatal("Invalid gallery url")
+		log.Fatal("Invalid gallery url, please check it.")
 	}
 
 	fmt.Println("Article Title:", title)
