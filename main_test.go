@@ -5,44 +5,63 @@ import (
 	"EH_downloader/utils"
 	"fmt"
 	"github.com/gocolly/colly/v2"
+	"github.com/spf13/cast"
+	"github.com/stretchr/testify/assert"
 	"net/http"
 	"path/filepath"
 	"testing"
 )
 
 func TestGetGalleryInfo(t *testing.T) {
-	urlStr := "https://e-hentai.org/g/1838806/61460acecb/"
-	c := colly.NewCollector()
-	title, maxPage := getGalleryInfo(c, urlStr)
-
-	expectedTitle := "[Homunculus] Bye-Bye Sister (COMIC Kairakuten 2021-02) [Chinese] [CE家族社×無邪気無修宇宙分組] [Digital]"
-	expectedMaxPage := 24
-	if title != expectedTitle || maxPage != expectedMaxPage {
-		t.Errorf("getGalleryInfo() = %s, %d; want %s, %d", title, maxPage, expectedTitle, expectedMaxPage)
+	testCases := []struct {
+		url             string
+		expectedTitle   string
+		expectedMaxPage int
+	}{
+		{
+			url:             "https://e-hentai.org/g/1838806/61460acecb/",
+			expectedTitle:   "[Homunculus] Bye-Bye Sister (COMIC Kairakuten 2021-02) [Chinese] [CE家族社×無邪気無修宇宙分組] [Digital]",
+			expectedMaxPage: 24,
+		},
+		{
+			url:             "https://zhuanlan.zhihu.com/p/375530785",
+			expectedTitle:   "",
+			expectedMaxPage: 0,
+		},
 	}
 
-	urlStr = "https://zhuanlan.zhihu.com/p/375530785"
-	title, maxPage = getGalleryInfo(c, urlStr)
-	expectedTitle = ""
-	expectedMaxPage = 0
-	if title != expectedTitle || maxPage != expectedMaxPage {
-		t.Errorf("getGalleryInfo() = %s, %d; want %s, %d", title, maxPage, expectedTitle, expectedMaxPage)
+	c := colly.NewCollector()
+
+	for _, tc := range testCases {
+		t.Run(tc.url, func(t *testing.T) {
+			title, maxPage := getGalleryInfo(c, tc.url)
+			assert.Equal(t, tc.expectedTitle, title, "Title mismatch")
+			assert.Equal(t, tc.expectedMaxPage, maxPage, "MaxPage mismatch")
+		})
 	}
 }
 
 func TestGenerateIndexURL(t *testing.T) {
-	urlStr := "https://xxx/yyy"
-	page := 8
-
-	expected := "https://xxx/yyy?p=8"
-	if generateIndexURL(urlStr, page) != expected {
-		t.Errorf("generateIndexURL() = %s; want %s", generateIndexURL(urlStr, page), expected)
+	url := "https://xxx/yyy"
+	testCases := []struct {
+		page     int
+		expected string
+	}{
+		{
+			page:     0,
+			expected: "https://xxx/yyy",
+		},
+		{
+			page:     8,
+			expected: "https://xxx/yyy?p=8",
+		},
 	}
 
-	page = 0
-	expected = "https://xxx/yyy"
-	if generateIndexURL(urlStr, page) != expected {
-		t.Errorf("generateIndexURL() = %s; want %s", generateIndexURL(urlStr, page), expected)
+	for _, tc := range testCases {
+		t.Run(cast.ToString(tc.page), func(t *testing.T) {
+			result := generateIndexURL(url, tc.page)
+			assert.Equal(t, tc.expected, result)
+		})
 	}
 }
 
