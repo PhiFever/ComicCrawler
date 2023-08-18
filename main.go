@@ -146,8 +146,10 @@ func main() {
 		os.Exit(0)
 	}
 	galleryUrl := cast.ToString(os.Args[1])
-	imageInOnepage := 40
-	beginIndex := 0
+
+	//待配置的参数
+	const imageInOnepage = 40
+	const beginIndex = 0
 
 	//记录开始时间
 	startTime := time.Now()
@@ -175,10 +177,12 @@ func main() {
 
 	sumPage := int(math.Ceil(float64(sumImage) / float64(imageInOnepage)))
 	for i := beginIndex; i < sumPage; i++ {
-		fmt.Println("Current index:", i)
+		fmt.Println("\nCurrent index:", i)
 		indexUrl := generateIndexURL(galleryUrl, i)
 		fmt.Println(indexUrl)
 		imagePageUrls := getAllImagePageUrl(collector, indexUrl)
+
+		//根据imagePageUrls获取imageDataList
 		for _, imagePageUrl := range imagePageUrls {
 			imageName, imageUrl := buildImageInfo(collector, imagePageUrl)
 			imageDataList = append(imageDataList, map[string]string{
@@ -186,9 +190,17 @@ func main() {
 				"imageUrl":  imageUrl,
 			})
 		}
+		//防止被ban，每处理一篇目录就sleep 5-10 seconds
+		sleepTime := utils.TrueRandFloat(5, 10)
+		log.Println("Sleep ", cast.ToString(sleepTime), " seconds...")
+		time.Sleep(time.Duration(sleepTime) * time.Second)
+
+		//// 进行本次处理目录中所有图片的批量保存
+		//err := saveImages(collector, imageDataList, safeTitle)
+		//utils.ErrorCheck(err)
 	}
 
-	// 进行图片批量保存
+	//保存imageDataList中的所有图片
 	err := saveImages(collector, imageDataList, safeTitle)
 	utils.ErrorCheck(err)
 

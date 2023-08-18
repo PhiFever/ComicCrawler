@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"fmt"
 	"github.com/spf13/cast"
 	"path/filepath"
 	"testing"
@@ -8,10 +9,24 @@ import (
 )
 
 func TestToSafeFilename(t *testing.T) {
-	title := `[sfs]\24r/f4?*<q>|:`
-	expected := "[sfs]_24r_f4___q___"
-	if ToSafeFilename(title) != expected {
-		t.Errorf("ToSafeFilename() = %s; want %s", ToSafeFilename(title), expected)
+	tests := []struct {
+		name string
+		in   string
+		want string
+	}{
+		{
+			name: "case1",
+			in:   `[sfs]\24r/f4?*<q>|:`,
+			want: `[sfs]_24r_f4___q___`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := ToSafeFilename(tt.in); got != tt.want {
+				t.Errorf("ToSafeFilename() = %v, want %v", got, tt.want)
+			}
+		})
 	}
 }
 
@@ -64,5 +79,33 @@ func TestSaveFile(t *testing.T) {
 	err := SaveFile(filePath, data)
 	if err != nil {
 		t.Errorf("SaveFile() = %s; want nil", err)
+	}
+}
+
+func TestRandFloat(t *testing.T) {
+	type args struct {
+		min float64
+		max float64
+	}
+	tests := []struct {
+		name string
+		args args
+	}{
+		{
+			name: "case1",
+			args: args{
+				min: 5,
+				max: 15,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			num := TrueRandFloat(tt.args.min, tt.args.max)
+			fmt.Printf("TrueRandFloat() = %v; want %v\n", num, tt.args)
+			if num < tt.args.min || num > tt.args.max {
+				t.Errorf("TrueRandFloat() = %v; want %v", TrueRandFloat(tt.args.min, tt.args.max), tt.args)
+			}
+		})
 	}
 }

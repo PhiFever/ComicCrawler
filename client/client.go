@@ -1,6 +1,7 @@
 package client
 
 import (
+	"fmt"
 	"github.com/gocolly/colly/v2"
 	"log"
 	"net/http"
@@ -16,10 +17,12 @@ func InitCollector(headers http.Header) *colly.Collector {
 	)
 	//限制采集规格
 	rule := &colly.LimitRule{
-		RandomDelay: 2 * time.Second,
+		RandomDelay: 5 * time.Second,
 		Parallelism: 5, //并发数
 	}
 	_ = c.Limit(rule)
+
+	//以下的所有设置在重新设置后都会失效
 
 	//设置超时时间
 	c.SetRequestTimeout(60 * time.Second)
@@ -29,14 +32,32 @@ func InitCollector(headers http.Header) *colly.Collector {
 		r.Headers = &headers
 	})
 
-	c.OnError(func(_ *colly.Response, err error) {
-		log.Fatal("Something went wrong:", err)
+	maxRetries := 3
+	retryCount := 0
+	c.OnError(func(r *colly.Response, err error) {
+		fmt.Println("Request URL:", r.Request.URL, "failed with response:", r, "\nError:", err)
+
+		// 检查是否达到最大重试次数
+		if retryCount < maxRetries {
+			retryCount++
+			fmt.Printf("Retry attempt %d out of %d...\n", retryCount, maxRetries)
+			fmt.Println("Waiting for 60 seconds before retrying...")
+			time.Sleep(60 * time.Second)
+
+			// 重新尝试连接
+			err := r.Request.Retry()
+			log.Println("Retry error:", err)
+		} else {
+			log.Fatal("Exceeded maximum retry attempts. Cannot establish connection.")
+		}
 	})
 
-	//c.OnResponse(func(r *colly.Response) {
-	//	log.Println("Visited", r.Request.URL)
-	//	//fmt.Println(string(r.Body))
-	//})
+	c.OnResponse(func(r *colly.Response) {
+		// 重置重试计数为初始值
+		retryCount = 0
+		//log.Println("Visited", r.Request.URL)
+		//fmt.Println(string(r.Body))
+	})
 	return c
 }
 
