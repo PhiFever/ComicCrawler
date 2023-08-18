@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/gocolly/colly/v2"
 	"log"
+	"math"
 	"net/http"
 	"time"
 )
@@ -41,8 +42,11 @@ func InitCollector(headers http.Header) *colly.Collector {
 		if retryCount < maxRetries {
 			retryCount++
 			fmt.Printf("Retry attempt %d out of %d...\n", retryCount, maxRetries)
-			fmt.Println("Waiting for 60 seconds before retrying...")
-			time.Sleep(60 * time.Second)
+			// 等待指数退避
+			//4,16,36
+			waitSeconds := math.Pow(2, float64(2*(retryCount+1)))
+			fmt.Printf("Waiting %.0f seconds...\n", waitSeconds)
+			time.Sleep(time.Duration(waitSeconds) * time.Second)
 
 			// 重新尝试连接
 			err := r.Request.Retry()

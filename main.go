@@ -97,30 +97,27 @@ func saveImages(baseCollector *colly.Collector, imageDataList []map[string]strin
 	err = os.MkdirAll(dir, os.ModePerm)
 	utils.ErrorCheck(err)
 
-	i := 0
+	var imageContent []byte
+
 	baseCollector.OnResponse(func(r *colly.Response) {
-		imageName := imageDataList[i]["imageName"]
-		//imageUrl := imageDataList[i]["imageUrl"]
+		imageContent = r.Body
+	})
+
+	for _, data := range imageDataList {
+		imageName := data["imageName"]
+		imageUrl := data["imageUrl"]
 		filePath, err := filepath.Abs(filepath.Join(dir, imageName))
 		utils.ErrorCheck(err)
-		err = utils.SaveFile(filePath, r.Body)
+		err = baseCollector.Request("GET", imageUrl, nil, nil, nil)
+		utils.ErrorCheck(err)
+		err = utils.SaveFile(filePath, imageContent)
 		if err != nil {
 			fmt.Println("Error saving image:", err)
 		} else {
 			fmt.Println("Image saved:", filePath)
 		}
-		//fmt.Println("Current value:", i)
-		if i < len(imageDataList)-1 {
-			i++
-			err = baseCollector.Request("GET", imageDataList[i]["imageUrl"], nil, nil, nil)
-			utils.ErrorCheck(err)
-		}
-	})
-
-	err = baseCollector.Request("GET", imageDataList[i]["imageUrl"], nil, nil, nil)
-	if err != nil {
-		return err
 	}
+
 	return nil
 }
 
@@ -163,9 +160,7 @@ func main() {
 		log.Fatal("Invalid gallery url, please check it.")
 	}
 
-	fmt.Println("Article Title:", title)
 	fmt.Println("Sum Image:", sumImage)
-
 	safeTitle := utils.ToSafeFilename(title)
 	fmt.Println(safeTitle)
 
@@ -182,6 +177,9 @@ func main() {
 		fmt.Println(indexUrl)
 		imagePageUrls := getAllImagePageUrl(collector, indexUrl)
 
+		//清空imageDataList中的数据
+		imageDataList = []map[string]string{}
+
 		//根据imagePageUrls获取imageDataList
 		for _, imagePageUrl := range imagePageUrls {
 			imageName, imageUrl := buildImageInfo(collector, imagePageUrl)
@@ -195,14 +193,15 @@ func main() {
 		log.Println("Sleep ", cast.ToString(sleepTime), " seconds...")
 		time.Sleep(time.Duration(sleepTime) * time.Second)
 
-		//// 进行本次处理目录中所有图片的批量保存
-		//err := saveImages(collector, imageDataList, safeTitle)
-		//utils.ErrorCheck(err)
-	}
+		// 进行本次处理目录中所有图片的批量保存
+		err := saveImages(collector, imageDataList, safeTitle)
+		utils.ErrorCheck(err)
 
-	//保存imageDataList中的所有图片
-	err := saveImages(collector, imageDataList, safeTitle)
-	utils.ErrorCheck(err)
+		//防止被ban，每保存一篇目录就sleep 5-10 seconds
+		sleepTime = utils.TrueRandFloat(5, 10)
+		log.Println("Sleep ", cast.ToString(sleepTime), " seconds...")
+		time.Sleep(time.Duration(sleepTime) * time.Second)
+	}
 
 	//记录结束时间
 	endTime := time.Now()
