@@ -55,8 +55,9 @@ func SaveFile(filePath string, data []byte) error {
 	return nil
 }
 
-// BuildCache 用于生成utf-8格式的图片列表缓存文件
-func BuildCache(saveDir string, cacheFile string, imageDataList []map[string]string) error {
+// BuildCache 用于生成utf-8格式的缓存文件
+// data为待写入数据结构
+func BuildCache(saveDir string, cacheFile string, data interface{}) error {
 	dir, err := filepath.Abs(saveDir)
 	err = os.MkdirAll(dir, os.ModePerm)
 	ErrorCheck(err)
@@ -77,7 +78,7 @@ func BuildCache(saveDir string, cacheFile string, imageDataList []map[string]str
 	// 设置编码器的输出流为 UTF-8
 	encoder.SetIndent("", "    ") // 设置缩进，可选
 	encoder.SetEscapeHTML(false)  // 禁用转义 HTML
-	err = encoder.Encode(imageDataList)
+	err = encoder.Encode(data)
 	if err != nil {
 		fmt.Println("JSON encoding error:", err)
 		return err
@@ -86,26 +87,28 @@ func BuildCache(saveDir string, cacheFile string, imageDataList []map[string]str
 	return nil
 }
 
-func LoadCache(filePath string) ([]map[string]string, error) {
-	var imageDataList []map[string]string
-	// 打开utf-8文件用于读取数据
+// LoadCache 用于加载utf-8格式的缓存文件
+// result是一个指向目标数据结构的指针
+func LoadCache(filePath string, result interface{}) error {
+	// 打开utf-8格式的文件用于读取数据
 	file, err := os.Open(filePath)
 	if err != nil {
 		fmt.Println("File open error:", err)
-		return nil, err
+		return err
 	}
 	defer func(file *os.File) {
 		err := file.Close()
 		ErrorCheck(err)
 	}(file)
+
 	// 创建 JSON 解码器
 	decoder := json.NewDecoder(file)
 	// 设置解码器的输入流为 UTF-8
-	err = decoder.Decode(&imageDataList)
+	err = decoder.Decode(result)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return imageDataList, nil
+	return nil
 }
 
 func CacheFileExists(filePath string) bool {
@@ -122,4 +125,18 @@ func TrueRandFloat(min, max float64) float64 {
 	// 生成范围在 [min, max) 内的随机浮点数
 	randomFloat := min + randomGenerator.Float64()*(max-min)
 	return randomFloat
+}
+
+func GetFileTotal(dirPath string, fileSuffix string) int {
+	var total int
+	err := filepath.Walk(dirPath, func(path string, info os.FileInfo, err error) error {
+		if strings.HasSuffix(path, fileSuffix) {
+			total++
+		}
+		return nil
+	})
+	if err != nil {
+		return 0
+	}
+	return total
 }

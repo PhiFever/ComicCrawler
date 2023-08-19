@@ -60,7 +60,8 @@ func TestBuildCache(t *testing.T) {
 }
 
 func TestLoadCache(t *testing.T) {
-	cacheImageDataList, err := LoadCache(filepath.Join(saveDir, cacheFile))
+	var cacheImageDataList []map[string]string
+	err := LoadCache(filepath.Join(saveDir, cacheFile), &cacheImageDataList)
 	if err != nil {
 		t.Errorf("loadCache() = %s; want nil", err)
 	}
@@ -105,6 +106,35 @@ func TestRandFloat(t *testing.T) {
 			fmt.Printf("TrueRandFloat() = %v; want %v\n", num, tt.args)
 			if num < tt.args.min || num > tt.args.max {
 				t.Errorf("TrueRandFloat() = %v; want %v", TrueRandFloat(tt.args.min, tt.args.max), tt.args)
+			}
+		})
+	}
+}
+
+func TestGetFileTotal(t *testing.T) {
+	type args struct {
+		dirPath    string
+		fileSuffix string
+	}
+	tests := []struct {
+		name string
+		args args
+		want int
+	}{
+		{
+			name: "../test",
+			args: args{
+				dirPath:    "../test",
+				fileSuffix: ".jpg",
+			},
+			want: 4,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := GetFileTotal(tt.args.dirPath, tt.args.fileSuffix); got != tt.want {
+				t.Errorf("GetFileTotal() = %v, want %v", got, tt.want)
 			}
 		})
 	}
