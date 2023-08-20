@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/gocolly/colly/v2"
 	"log"
-	"math"
 	"net/http"
 	"time"
 )
@@ -18,6 +17,8 @@ func InitCollector(headers http.Header) *colly.Collector {
 	)
 	//限制采集规格
 	rule := &colly.LimitRule{
+		//TODO: 限制规则似乎不起效果，需要进一步研究
+		//理论上来说每次请求前会有访问延迟，但是实际使用的时候感觉不出来，不知道为什么
 		RandomDelay: 5 * time.Second,
 		Parallelism: 5, //并发数
 	}
@@ -42,10 +43,12 @@ func InitCollector(headers http.Header) *colly.Collector {
 		if retryCount < maxRetries {
 			retryCount++
 			fmt.Printf("Retry attempt %d out of %d...\n", retryCount, maxRetries)
-			// 等待指数退避
-			//4,16,36
-			waitSeconds := math.Pow(2, float64(2*(retryCount+1)))
-			fmt.Printf("Waiting %.0f seconds...\n", waitSeconds)
+			//TODO: 重试策略似乎不起效果，需要进一步研究
+			//等待指数退避
+			//waitSeconds := math.Pow(2, float64(2*(retryCount+1)))
+			//等待retryCount分钟
+			waitSeconds := retryCount * 60
+			fmt.Printf("Waiting %d seconds...\n", waitSeconds)
 			time.Sleep(time.Duration(waitSeconds) * time.Second)
 
 			// 重新尝试连接
@@ -63,29 +66,4 @@ func InitCollector(headers http.Header) *colly.Collector {
 		//fmt.Println(string(r.Body))
 	})
 	return c
-}
-
-func BuildJpegHeaders() http.Header {
-	headers := http.Header{
-		"Accept":             {"image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8"},
-		"Accept-Encoding":    {"gzip, deflate, br"},
-		"Accept-Language":    {"zh-CN,zh;q=0.9"},
-		"Connection":         {"keep-alive"},
-		"Dnt":                {"1"},
-		"Host":               {"dqoaprm.qgankvrkxxiw.hath.network"},
-		"Referer":            {"https://e-hentai.org/"},
-		"Sec-Ch-Ua":          {"\"Not/A)Brand\";v=\"99\", \"Google Chrome\";v=\"115\", \"Chromium\";v=\"115\""},
-		"Sec-Ch-Ua-Mobile":   {"?0"},
-		"Sec-Ch-Ua-Platform": {"\"Windows\""},
-		"Sec-Fetch-Dest":     {"image"},
-		"Sec-Fetch-Mode":     {"no-cors"},
-		"Sec-Fetch-Site":     {"cross-site"},
-		"Sec-Gpc":            {"1"},
-		"User-Agent":         {"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36"},
-	}
-
-	//for key, values := range headers {
-	//	fmt.Printf("%s: %s\n", key, values)
-	//}
-	return headers
 }

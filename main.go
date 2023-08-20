@@ -4,6 +4,7 @@ import (
 	"EH_downloader/client"
 	"EH_downloader/eh"
 	"EH_downloader/utils"
+	"flag"
 	"fmt"
 	"github.com/gocolly/colly/v2"
 	"github.com/spf13/cast"
@@ -13,6 +14,12 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+)
+
+var (
+	galleryUrl string
+	onlyInfo   bool
+	listFile   string
 )
 
 // saveImages 保存imageDataList中的所有图片，imageDataList中的每个元素都是一个map，包含两个键值对，imageName和imageUrl
@@ -53,28 +60,32 @@ func buildImageInfo(c *colly.Collector, imagePageUrl string) (string, string) {
 	return imageName, imageUrl
 }
 
-func main() {
-	if len(os.Args) != 2 {
-		log.Fatalln("传参数目错误！请使用 ./eh_downloader.exe -h 命令查看使用参数说明。")
-	}
-	if len(os.Args) == 2 && (cast.ToString(os.Args[1]) == "help" || cast.ToString(os.Args[1]) == "-help" || cast.ToString(os.Args[1]) == "--help" || cast.ToString(os.Args[1]) == "-h") {
-		fmt.Println(`使用: ./eh_downloader.exe "gallery_url"`)
-		fmt.Println()
-		fmt.Println("目的: 下载e-hentai.org指定画廊的所有图片")
-		fmt.Println()
-		fmt.Println("选项与参数说明: ")
-		fmt.Println("gallery_url: 待下载的画廊地址，一般来说带不带双引号都可以。")
-		os.Exit(0)
-	}
-	galleryUrl := cast.ToString(os.Args[1])
+func initArgsParse() {
+	flag.StringVar(&galleryUrl, "url", "", "待下载的画廊地址（必填）")
+	flag.StringVar(&galleryUrl, "u", "", "待下载的画廊地址（必填）")
+	flag.BoolVar(&onlyInfo, "info", false, "只获取画廊信息(true/false)，默认为false")
+	flag.BoolVar(&onlyInfo, "i", false, "只获取画廊信息(true/false)，默认为false")
+	flag.StringVar(&listFile, "list", "", "待下载的画廊地址列表文件")
+	flag.StringVar(&listFile, "l", "", "待下载的画廊地址列表文件")
+}
 
+func main() {
 	//待配置的参数
 	const imageInOnepage = 40
 	const cacheFile = "galleryInfo.json"
+
+	initArgsParse()
+	flag.Parse()
+	if galleryUrl == "" && listFile == "" {
+		fmt.Println("本程序为命令行程序，请在命令行中运行参数-h以查看帮助")
+		return
+	}
+
 	beginIndex := 0
 
 	//记录开始时间
 	startTime := time.Now()
+
 	collector := colly.NewCollector(
 		//模拟浏览器
 		colly.UserAgent(`Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36 Edg/115.0.1901.203`),
@@ -107,14 +118,17 @@ func main() {
 		//生成缓存文件
 		err := utils.BuildCache(safeTitle, cacheFile, galleryInfo)
 		utils.ErrorCheck(err)
-		//return
+		if onlyInfo {
+			fmt.Println("画廊信息获取完毕，程序自动退出。")
+			return
+		}
 	}
 
 	//创建map{'imageName':imageName,'imageUrl':imageUrl}
 	var imageDataList []map[string]string
 
 	//重新初始化Collector
-	collector = client.InitCollector(client.BuildJpegHeaders())
+	collector = client.InitCollector(eh.BuildJpegRequestHeaders())
 
 	sumPage := int(math.Ceil(float64(galleryInfo.TotalImage) / float64(imageInOnepage)))
 	for i := beginIndex; i < sumPage; i++ {
