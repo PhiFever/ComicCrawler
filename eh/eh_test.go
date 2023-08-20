@@ -14,9 +14,9 @@ func TestGetGalleryInfo(t *testing.T) {
 		expectedMaxPage int
 	}{
 		{
-			url:             "https://e-hentai.org/g/1838806/61460acecb/",
-			expectedTitle:   "[Homunculus] Bye-Bye Sister (COMIC Kairakuten 2021-02) [Chinese] [CE家族社×無邪気無修宇宙分組] [Digital]",
-			expectedMaxPage: 24,
+			url:             "https://e-hentai.org/g/2569708/4bd9316841/",
+			expectedTitle:   "[中信出版社] 流浪地球2电影制作手记 The Wandering Earth II FLIM HAND BOOK",
+			expectedMaxPage: 468,
 		},
 		{
 			url:             "https://zhuanlan.zhihu.com/p/375530785",

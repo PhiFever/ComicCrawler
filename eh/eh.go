@@ -1,14 +1,19 @@
 package eh
 
 import (
+	"EH_downloader/client"
+	"EH_downloader/utils"
 	"fmt"
 	"github.com/gocolly/colly/v2"
 	"github.com/spf13/cast"
 	"log"
+	"math"
 	"net/http"
 	"net/url"
+	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 )
 
 type GalleryInfo struct {
@@ -146,4 +151,92 @@ func BuildJpegRequestHeaders() http.Header {
 	//	fmt.Printf("%s: %s\n", key, values)
 	//}
 	return headers
+}
+
+func GetImageInfo(c *colly.Collector, imagePageUrl string) (string, string) {
+	imageIndex := imagePageUrl[strings.LastIndex(imagePageUrl, "-")+1:]
+	imageUrl := GetImageUrl(c, imagePageUrl)
+	imageSuffix := imageUrl[strings.LastIndex(imageUrl, "."):]
+	imageName := fmt.Sprintf("%s%s", imageIndex, imageSuffix)
+	return imageName, imageUrl
+}
+
+func DownloadGallery(cacheFile string, imageInOnepage int, galleryUrl string, onlyInfo bool) {
+	beginIndex := 0
+	collector := colly.NewCollector(
+		//模拟浏览器
+		colly.UserAgent(`Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36 Edg/115.0.1901.203`),
+	)
+
+	//获取画廊信息
+	galleryInfo := GetGalleryInfo(collector, galleryUrl)
+	fmt.Println("Total Image:", galleryInfo.TotalImage)
+	safeTitle := utils.ToSafeFilename(galleryInfo.Title)
+	fmt.Println(safeTitle)
+
+	if utils.FileExists(filepath.Join(safeTitle, cacheFile)) {
+		fmt.Println("发现下载记录")
+		//获取已经下载的图片数量
+		downloadedImageCount := utils.GetFileTotal(safeTitle, []string{".jpg", ".png"})
+		fmt.Println("Downloaded image count:", downloadedImageCount)
+		//计算剩余图片数量
+		remainImageCount := galleryInfo.TotalImage - downloadedImageCount
+		if remainImageCount == 0 {
+			fmt.Println("本画廊已经下载完毕")
+			return
+		} else if remainImageCount < 0 {
+			fmt.Println("下载记录有误！")
+			return
+		} else {
+			fmt.Println("剩余图片数量:", remainImageCount)
+			beginIndex = int(math.Floor(float64(downloadedImageCount) / float64(imageInOnepage)))
+		}
+	} else {
+		//生成缓存文件
+		err := utils.BuildCache(safeTitle, cacheFile, galleryInfo)
+		utils.ErrorCheck(err)
+		if onlyInfo {
+			fmt.Println("画廊信息获取完毕，程序自动退出。")
+			return
+		}
+	}
+
+	//创建map{'imageName':imageName,'imageUrl':imageUrl}
+	var imageDataList []map[string]string
+
+	//重新初始化Collector
+	collector = client.InitCollector(BuildJpegRequestHeaders())
+
+	sumPage := int(math.Ceil(float64(galleryInfo.TotalImage) / float64(imageInOnepage)))
+	for i := beginIndex; i < sumPage; i++ {
+		fmt.Println("\nCurrent index:", i)
+		indexUrl := GenerateIndexURL(galleryUrl, i)
+		fmt.Println(indexUrl)
+		imagePageUrls := GetAllImagePageUrl(collector, indexUrl)
+
+		//清空imageDataList中的数据
+		imageDataList = []map[string]string{}
+
+		//根据imagePageUrls获取imageDataList
+		for _, imagePageUrl := range imagePageUrls {
+			imageName, imageUrl := GetImageInfo(collector, imagePageUrl)
+			imageDataList = append(imageDataList, map[string]string{
+				"imageName": imageName,
+				"imageUrl":  imageUrl,
+			})
+		}
+		//防止被ban，每处理一篇目录就sleep 5-10 seconds
+		sleepTime := utils.TrueRandFloat(5, 10)
+		log.Println("Sleep ", cast.ToString(sleepTime), " seconds...")
+		time.Sleep(time.Duration(sleepTime) * time.Second)
+
+		// 进行本次处理目录中所有图片的批量保存
+		err := utils.SaveImages(collector, imageDataList, safeTitle)
+		utils.ErrorCheck(err)
+
+		//防止被ban，每保存一篇目录就sleep 5-15 seconds
+		sleepTime = utils.TrueRandFloat(5, 15)
+		log.Println("Sleep ", cast.ToString(sleepTime), " seconds...")
+		time.Sleep(time.Duration(sleepTime) * time.Second)
+	}
 }

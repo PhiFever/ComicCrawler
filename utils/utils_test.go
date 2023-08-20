@@ -1,9 +1,12 @@
 package utils
 
 import (
+	"EH_downloader/client"
 	"fmt"
 	"github.com/spf13/cast"
+	"net/http"
 	"path/filepath"
+	"reflect"
 	"testing"
 	"time"
 )
@@ -114,7 +117,7 @@ func TestRandFloat(t *testing.T) {
 func TestGetFileTotal(t *testing.T) {
 	type args struct {
 		dirPath    string
-		fileSuffix string
+		fileSuffix []string
 	}
 	tests := []struct {
 		name string
@@ -125,7 +128,7 @@ func TestGetFileTotal(t *testing.T) {
 			name: "../test",
 			args: args{
 				dirPath:    "../test",
-				fileSuffix: ".jpg",
+				fileSuffix: []string{".jpg"},
 			},
 			want: 4,
 		},
@@ -133,9 +136,66 @@ func TestGetFileTotal(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := GetFileTotal(tt.args.dirPath, tt.args.fileSuffix); got != tt.want {
-				t.Errorf("GetFileTotal() = %v, want %v", got, tt.want)
+			if total := GetFileTotal(tt.args.dirPath, tt.args.fileSuffix); total != tt.want {
+				t.Errorf("GetFileTotal() = %v, want %v", total, tt.want)
 			}
 		})
+	}
+}
+
+func TestReadListFile(t *testing.T) {
+	type args struct {
+		filePath string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    []string
+		wantErr bool
+	}{
+		{
+			name: "case1",
+			args: args{
+				filePath: "../test/list.txt",
+			},
+			want: []string{
+				"https://e-hentai.org/g/1111111/1111111111/",
+				"https://e-hentai.org/g/2222222/2222222222/",
+				"https://e-hentai.org/g/3333333/3333333333/",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ReadListFile(tt.args.filePath)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ReadListFile() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("ReadListFile() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestSaveImages(t *testing.T) {
+	headers := make(http.Header)
+	headers.Set(`User-Agent`, `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.82`)
+	c := client.InitCollector(headers)
+	absPath, err := filepath.Abs(saveDir)
+	fmt.Println(absPath)
+	if err != nil {
+		t.Errorf("filepath.Abs() = %s; want nil", err)
+	}
+	err = SaveImages(c, imageDataList, absPath)
+	if err != nil {
+		t.Errorf("saveImages() = %s; want nil", err)
+	}
+	for _, data := range imageDataList {
+		imagePath := filepath.Join(saveDir, data["imageName"])
+		if !FileExists(imagePath) {
+			t.Errorf("image not exists: %s", imagePath)
+		}
 	}
 }

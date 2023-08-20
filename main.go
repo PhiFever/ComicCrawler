@@ -1,18 +1,11 @@
 package main
 
 import (
-	"EH_downloader/client"
 	"EH_downloader/eh"
 	"EH_downloader/utils"
 	"flag"
 	"fmt"
-	"github.com/gocolly/colly/v2"
-	"github.com/spf13/cast"
 	"log"
-	"math"
-	"os"
-	"path/filepath"
-	"strings"
 	"time"
 )
 
@@ -21,44 +14,6 @@ var (
 	onlyInfo   bool
 	listFile   string
 )
-
-// saveImages 保存imageDataList中的所有图片，imageDataList中的每个元素都是一个map，包含两个键值对，imageName和imageUrl
-func saveImages(baseCollector *colly.Collector, imageDataList []map[string]string, saveDir string) error {
-	dir, err := filepath.Abs(saveDir)
-	err = os.MkdirAll(dir, os.ModePerm)
-	utils.ErrorCheck(err)
-
-	var imageContent []byte
-
-	baseCollector.OnResponse(func(r *colly.Response) {
-		imageContent = r.Body
-	})
-
-	for _, data := range imageDataList {
-		imageName := data["imageName"]
-		imageUrl := data["imageUrl"]
-		filePath, err := filepath.Abs(filepath.Join(dir, imageName))
-		utils.ErrorCheck(err)
-		err = baseCollector.Request("GET", imageUrl, nil, nil, nil)
-		utils.ErrorCheck(err)
-		err = utils.SaveFile(filePath, imageContent)
-		if err != nil {
-			fmt.Println("Error saving image:", err)
-		} else {
-			fmt.Println("Image saved:", filePath)
-		}
-	}
-
-	return nil
-}
-
-func buildImageInfo(c *colly.Collector, imagePageUrl string) (string, string) {
-	imageIndex := imagePageUrl[strings.LastIndex(imagePageUrl, "-")+1:]
-	imageUrl := eh.GetImageUrl(c, imagePageUrl)
-	imageSuffix := imageUrl[strings.LastIndex(imageUrl, "."):]
-	imageName := fmt.Sprintf("%s%s", imageIndex, imageSuffix)
-	return imageName, imageUrl
-}
 
 func initArgsParse() {
 	flag.StringVar(&galleryUrl, "url", "", "待下载的画廊地址（必填）")
@@ -76,95 +31,37 @@ func main() {
 
 	initArgsParse()
 	flag.Parse()
-	if galleryUrl == "" && listFile == "" {
+
+	var galleryUrlList []string
+
+	switch {
+	case galleryUrl == "" && listFile == "":
 		fmt.Println("本程序为命令行程序，请在命令行中运行参数-h以查看帮助")
 		return
+	case galleryUrl != "" && listFile != "":
+		fmt.Println("参数错误，请在命令行中运行参数-h以查看帮助")
+		return
+	case listFile != "":
+		UrlList, err := utils.ReadListFile(listFile)
+		utils.ErrorCheck(err)
+		//UrlList... 使用了展开操作符（...），将 UrlList 切片中的所有元素一个一个地展开，作为参数传递给 append 函数
+		galleryUrlList = append(galleryUrlList, UrlList...)
+	case galleryUrl != "":
+		galleryUrlList = append(galleryUrlList, galleryUrl)
+	default:
+		log.Fatal("未知错误")
 	}
-
-	beginIndex := 0
 
 	//记录开始时间
 	startTime := time.Now()
 
-	collector := colly.NewCollector(
-		//模拟浏览器
-		colly.UserAgent(`Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36 Edg/115.0.1901.203`),
-	)
-
-	//获取画廊信息
-	galleryInfo := eh.GetGalleryInfo(collector, galleryUrl)
-	fmt.Println("Total Image:", galleryInfo.TotalImage)
-	safeTitle := utils.ToSafeFilename(galleryInfo.Title)
-	fmt.Println(safeTitle)
-
-	if utils.CacheFileExists(filepath.Join(safeTitle, cacheFile)) {
-		fmt.Println("发现下载记录")
-		//获取已经下载的图片数量
-		downloadedImageCount := utils.GetFileTotal(safeTitle, "jpg")
-		fmt.Println("Downloaded image count:", downloadedImageCount)
-		//计算剩余图片数量
-		remainImageCount := galleryInfo.TotalImage - downloadedImageCount
-		if remainImageCount == 0 {
-			fmt.Println("所有图片已下载完成！程序自动退出。")
-			return
-		} else if remainImageCount < 0 {
-			fmt.Println("下载记录有误！")
-			return
-		} else {
-			fmt.Println("剩余图片数量:", remainImageCount)
-			beginIndex = int(math.Floor(float64(downloadedImageCount) / float64(imageInOnepage)))
-		}
-	} else {
-		//生成缓存文件
-		err := utils.BuildCache(safeTitle, cacheFile, galleryInfo)
-		utils.ErrorCheck(err)
-		if onlyInfo {
-			fmt.Println("画廊信息获取完毕，程序自动退出。")
-			return
-		}
-	}
-
-	//创建map{'imageName':imageName,'imageUrl':imageUrl}
-	var imageDataList []map[string]string
-
-	//重新初始化Collector
-	collector = client.InitCollector(eh.BuildJpegRequestHeaders())
-
-	sumPage := int(math.Ceil(float64(galleryInfo.TotalImage) / float64(imageInOnepage)))
-	for i := beginIndex; i < sumPage; i++ {
-		fmt.Println("\nCurrent index:", i)
-		indexUrl := eh.GenerateIndexURL(galleryUrl, i)
-		fmt.Println(indexUrl)
-		imagePageUrls := eh.GetAllImagePageUrl(collector, indexUrl)
-
-		//清空imageDataList中的数据
-		imageDataList = []map[string]string{}
-
-		//根据imagePageUrls获取imageDataList
-		for _, imagePageUrl := range imagePageUrls {
-			imageName, imageUrl := buildImageInfo(collector, imagePageUrl)
-			imageDataList = append(imageDataList, map[string]string{
-				"imageName": imageName,
-				"imageUrl":  imageUrl,
-			})
-		}
-		//防止被ban，每处理一篇目录就sleep 5-10 seconds
-		sleepTime := utils.TrueRandFloat(5, 10)
-		log.Println("Sleep ", cast.ToString(sleepTime), " seconds...")
-		time.Sleep(time.Duration(sleepTime) * time.Second)
-
-		// 进行本次处理目录中所有图片的批量保存
-		err := saveImages(collector, imageDataList, safeTitle)
-		utils.ErrorCheck(err)
-
-		//防止被ban，每保存一篇目录就sleep 5-10 seconds
-		sleepTime = utils.TrueRandFloat(5, 10)
-		log.Println("Sleep ", cast.ToString(sleepTime), " seconds...")
-		time.Sleep(time.Duration(sleepTime) * time.Second)
+	for _, url := range galleryUrlList {
+		fmt.Println("Current gallery:", url)
+		eh.DownloadGallery(cacheFile, imageInOnepage, url, onlyInfo)
 	}
 
 	//记录结束时间
 	endTime := time.Now()
 	//计算执行时间，单位为秒
-	fmt.Println("执行时间：", endTime.Sub(startTime).Seconds(), "秒")
+	fmt.Println("程序结束，执行时间：", endTime.Sub(startTime).Seconds(), "秒")
 }

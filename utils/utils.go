@@ -3,6 +3,7 @@ package utils
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/gocolly/colly/v2"
 	"log"
 	"math/rand"
 	"os"
@@ -111,7 +112,7 @@ func LoadCache(filePath string, result interface{}) error {
 	return nil
 }
 
-func CacheFileExists(filePath string) bool {
+func FileExists(filePath string) bool {
 	_, err := os.Stat(filePath)
 	return err == nil || os.IsExist(err)
 }
@@ -127,16 +128,88 @@ func TrueRandFloat(min, max float64) float64 {
 	return randomFloat
 }
 
-func GetFileTotal(dirPath string, fileSuffix string) int {
-	var total int
+// GetFileTotal 用于获取指定目录下指定后缀的文件数量
+func GetFileTotal(dirPath string, fileSuffixes []string) int {
+	var count int // 用于存储文件数量的变量
+
+	// 使用Walk函数遍历指定目录及其子目录中的所有文件和文件夹
 	err := filepath.Walk(dirPath, func(path string, info os.FileInfo, err error) error {
-		if strings.HasSuffix(path, fileSuffix) {
-			total++
+		if err != nil {
+			return err
+		}
+		// 检查是否为文件
+		if !info.IsDir() {
+			// 获取文件的扩展名
+			ext := filepath.Ext(path)
+			// 将扩展名转换为小写，以便比较
+			ext = strings.ToLower(ext)
+			// 检查文件扩展名是否在指定的后缀列表中
+			for _, suffix := range fileSuffixes {
+				if ext == suffix {
+					count++
+					break // 找到匹配的后缀，停止循环
+				}
+			}
 		}
 		return nil
 	})
+
 	if err != nil {
-		return 0
+		fmt.Println("遍历目录出错:", err)
 	}
-	return total
+
+	return count
+}
+
+// ReadListFile 用于按行读取列表文件，返回一个字符串切片
+func ReadListFile(filePath string) ([]string, error) {
+	var list []string
+	file, err := os.Open(filePath)
+	if err != nil {
+		return list, err
+	}
+	defer func(file *os.File) {
+		err := file.Close()
+		ErrorCheck(err)
+	}(file)
+
+	var line string
+	for {
+		_, err := fmt.Fscanln(file, &line)
+		if err != nil {
+			break
+		}
+		list = append(list, line)
+	}
+	return list, nil
+}
+
+// SaveImages 保存imageDataList中的所有图片，imageDataList中的每个元素都是一个map，包含两个键值对，imageName和imageUrl
+func SaveImages(baseCollector *colly.Collector, imageDataList []map[string]string, saveDir string) error {
+	dir, err := filepath.Abs(saveDir)
+	err = os.MkdirAll(dir, os.ModePerm)
+	ErrorCheck(err)
+
+	var imageContent []byte
+
+	baseCollector.OnResponse(func(r *colly.Response) {
+		imageContent = r.Body
+	})
+
+	for _, data := range imageDataList {
+		imageName := data["imageName"]
+		imageUrl := data["imageUrl"]
+		filePath, err := filepath.Abs(filepath.Join(dir, imageName))
+		ErrorCheck(err)
+		err = baseCollector.Request("GET", imageUrl, nil, nil, nil)
+		ErrorCheck(err)
+		err = SaveFile(filePath, imageContent)
+		if err != nil {
+			fmt.Println("Error saving image:", err)
+		} else {
+			fmt.Println("Image saved:", filePath)
+		}
+	}
+
+	return nil
 }
