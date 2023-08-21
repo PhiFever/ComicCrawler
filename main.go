@@ -50,10 +50,10 @@ func main() {
 	switch {
 	case galleryUrl == "" && listFile == "":
 		fmt.Println("本程序为命令行程序，请在命令行中运行参数-h以查看帮助")
-		os.Exit(0)
+		os.Exit(-1)
 	case galleryUrl != "" && listFile != "":
 		fmt.Println("参数错误，请在命令行中运行参数-h以查看帮助")
-		os.Exit(0)
+		os.Exit(-1)
 	case listFile != "":
 		UrlList, err := utils.ReadListFile(listFile)
 		utils.ErrorCheck(err)
