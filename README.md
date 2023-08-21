@@ -1,6 +1,6 @@
 ## Todo
 
-1. [  ] Add a `--version` option
+1. [fixed ] Add a `--version` option
 2. [fixed ] 增加缓存上次下载的进度，使下次下载同一gallery时从上次失败的进度开始下载
 3. [fixed ] 增加批量下载功能，从文件中按行读取gallery_url，下载所有的gallery
 4. [fixed ]实现每处理一个主页就下载一次图片，而不是等到所有主页处理完毕后再下载图片
@@ -32,17 +32,17 @@ process.json
 ```
 
 ##  使用说明
-1. 只获取gallery信息，不下载图片
+1. 获取详细说明（对应的短参数名）
 ```powershell
-./eh_downloader.exe -url https://e-hentai.org/g/xxxxxx/xxxxxxxxxx/ -info true
+./eh_downloader.exe -h
 ```
 2. 获取gallery信息，并下载图片
 ```powershell
 ./eh_downloader.exe -url https://e-hentai.org/g/xxxxxx/xxxxxxxxxx/
 ```
-3. 获取详细说明（对应的短参数名）
+3. 只获取gallery信息，不下载图片
 ```powershell
-./eh_downloader.exe -h
+./eh_downloader.exe -url https://e-hentai.org/g/xxxxxx/xxxxxxxxxx/ -info true
 ```
 4. 下载gallery列表中的所有gallery（不能与-url一起使用）
 ```powershell
@@ -51,5 +51,5 @@ process.json
 ## 编译release版本命令
 
 ```powershell
-go build -ldflags="-s -w" -o eh_downloader.exe main.go
+go build -ldflags="-s -w" -ldflags "-X 'main.buildTime=$(git show -s --format=%cd)' -X 'main.goVersion=$(go version)'" -o eh_downloader.exe main.go
 ```

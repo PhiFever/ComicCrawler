@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"os"
 	"time"
 )
 
@@ -13,6 +14,9 @@ var (
 	galleryUrl string
 	onlyInfo   bool
 	listFile   string
+	buildTime  string
+	goVersion  string
+	version    = "v1.0.0"
 )
 
 func initArgsParse() {
@@ -20,14 +24,23 @@ func initArgsParse() {
 	flag.StringVar(&galleryUrl, "u", "", "待下载的画廊地址（必填）")
 	flag.BoolVar(&onlyInfo, "info", false, "只获取画廊信息(true/false)，默认为false")
 	flag.BoolVar(&onlyInfo, "i", false, "只获取画廊信息(true/false)，默认为false")
-	flag.StringVar(&listFile, "list", "", "待下载的画廊地址列表文件")
-	flag.StringVar(&listFile, "l", "", "待下载的画廊地址列表文件")
+	flag.StringVar(&listFile, "list", "", "待下载的画廊地址列表文件，每行一个url。(不能与参数-url同时使用)")
+	flag.StringVar(&listFile, "l", "", "待下载的画廊地址列表文件，每行一个url。(不能与参数-url同时使用)")
 }
 
 func main() {
 	//待配置的参数
 	const imageInOnepage = 40
 	const cacheFile = "galleryInfo.json"
+
+	//版本信息
+	args := os.Args
+	if len(args) == 2 && (args[1] == "--version" || args[1] == "-v") {
+		fmt.Printf("Version: %s \n", version)
+		fmt.Printf("Build TimeStamp: %s \n", buildTime)
+		fmt.Printf("GoLang Version: %s \n", goVersion)
+		os.Exit(0)
+	}
 
 	initArgsParse()
 	flag.Parse()
@@ -37,10 +50,10 @@ func main() {
 	switch {
 	case galleryUrl == "" && listFile == "":
 		fmt.Println("本程序为命令行程序，请在命令行中运行参数-h以查看帮助")
-		return
+		os.Exit(0)
 	case galleryUrl != "" && listFile != "":
 		fmt.Println("参数错误，请在命令行中运行参数-h以查看帮助")
-		return
+		os.Exit(0)
 	case listFile != "":
 		UrlList, err := utils.ReadListFile(listFile)
 		utils.ErrorCheck(err)
