@@ -7,11 +7,11 @@
 5. [fixed ]main.saveImages的实现不够优雅，需要重构
 6. [  ]重构eh的相关函数，使主函数能根据传入参数的不同而调用不同网站的支持接口
 7. [  ]增加对exhentai的支持
-8. [  ]增加控制台彩色输出
+8. [fixed ]增加控制台彩色输出
 
-```
 缓存文件格式
-process.json
+`gallery_info.json`
+```json
 {
     "gallery_url": "https://e-hentai.org/g/xxxxxx/xxxxxxxxxx/",
     "gallery_title": "xxxxxx",
@@ -20,14 +20,13 @@ process.json
         "artist": "xyz",
         "male": [
             "aaa",
-            "bbb",
+            "bbb"
         ],
         "female":[
             "xxx",
-            "yyy",
-        ],
-        ........
-    },
+            "yyy"
+        ]
+    }
 }
 ```
 

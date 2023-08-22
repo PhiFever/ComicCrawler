@@ -5,6 +5,7 @@ import (
 	"EH_downloader/utils"
 	"flag"
 	"fmt"
+	"github.com/fatih/color"
 	"log"
 	"os"
 	"time"
@@ -68,9 +69,11 @@ func main() {
 	//记录开始时间
 	startTime := time.Now()
 
+	success := color.New(color.Bold, color.FgGreen).FprintlnFunc()
 	for _, url := range galleryUrlList {
-		fmt.Println("Current gallery:", url)
+		success(os.Stdout, "开始下载gallery:", url)
 		eh.DownloadGallery(cacheFile, imageInOnepage, url, onlyInfo)
+		success(os.Stdout, "gallery下载完毕:", url)
 	}
 
 	//记录结束时间
