@@ -79,5 +79,5 @@ func main() {
 	//记录结束时间
 	endTime := time.Now()
 	//计算执行时间，单位为秒
-	fmt.Println("程序结束，执行时间：", endTime.Sub(startTime).Seconds(), "秒")
+	success(os.Stdout, "所有文件下载完毕，共耗时:", endTime.Sub(startTime).Seconds(), "秒")
 }
