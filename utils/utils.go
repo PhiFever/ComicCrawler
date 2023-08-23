@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/gocolly/colly/v2"
-	"io"
 	"log"
 	"math/rand"
 	"os"
@@ -213,46 +212,4 @@ func SaveImages(baseCollector *colly.Collector, imageDataList []map[string]strin
 	}
 
 	return nil
-}
-
-type Cookie struct {
-	Domain     string  `json:"domain"`
-	Expiration float64 `json:"expirationDate"`
-	HostOnly   bool    `json:"hostOnly"`
-	HTTPOnly   bool    `json:"httpOnly"`
-	Name       string  `json:"name"`
-	Path       string  `json:"path"`
-	SameSite   string  `json:"sameSite"`
-	Secure     bool    `json:"secure"`
-	Session    bool    `json:"session"`
-	StoreID    string  `json:"storeId"`
-	Value      string  `json:"value"`
-	ID         int     `json:"id"`
-}
-
-func ReadCookiesFromFile(filePath string) ([]Cookie, error) {
-	var cookies []Cookie
-
-	file, err := os.Open(filePath)
-	if err != nil {
-		return nil, err
-	}
-	defer func(file *os.File) {
-		err := file.Close()
-		if err != nil {
-			log.Fatal(err)
-		}
-	}(file)
-
-	data, err := io.ReadAll(file)
-	if err != nil {
-		return nil, err
-	}
-
-	err = json.Unmarshal(data, &cookies)
-	if err != nil {
-		return nil, err
-	}
-
-	return cookies, nil
 }

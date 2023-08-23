@@ -1,6 +1,7 @@
 package main
 
 import (
+	"ComicDownloader/dmzj"
 	"ComicDownloader/eh"
 	"ComicDownloader/utils"
 	"flag"
@@ -28,10 +29,11 @@ type GalleryDownloader struct{}
 func (gd GalleryDownloader) Download(infoJson string, url string, onlyInfo bool) error {
 	// 根据正则表达式判断是哪个软件包的gallery，并调用相应的下载函数
 	if matched, _ := regexp.MatchString(`^https://e-hentai.org/g/[a-z0-9]{7}/[a-z0-9]{10}/$`, url); matched {
-		eh.DownloadGallery(infoJson, url, onlyInfo)
 		//fmt.Println("调用eh包的DownloadGallery函数")
+		eh.DownloadGallery(infoJson, url, onlyInfo)
 	} else if matched, _ := regexp.MatchString(`^https://manhua.dmzj.com/[a-z0-9]*/$`, url); matched {
 		//fmt.Println("调用dmzj包的DownloadGallery函数")
+		dmzj.DownloadGallery(infoJson, url, onlyInfo)
 	} else {
 		return fmt.Errorf("未知的url格式：%s", url)
 	}

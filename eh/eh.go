@@ -51,23 +51,24 @@ func GetGalleryInfo(galleryUrl string) GalleryInfo {
 	})
 
 	// 找到<div id="taglist">标签
+	rp := strings.NewReplacer(":", "")
 	c.OnHTML("div#taglist", func(e *colly.HTMLElement) {
 		// 查找<div id="taglist">标签下的<table>元素
 		e.ForEach("table", func(_ int, el *colly.HTMLElement) {
 			// 在每个<table>元素中查找<tr>元素
 			el.ForEach("tr", func(_ int, el *colly.HTMLElement) {
 				//获取<tr>元素的<td class="tc">标签
-				key := el.ChildText("td.tc")
-				rp := strings.NewReplacer(":", "")
+				key := strings.TrimSpace(el.ChildText("td.tc"))
 				localKey := rp.Replace(key) // 创建局部变量来保存循环迭代中的key值
 				//fmt.Printf("key=%s: \n", localKey)
 				el.ForEach("td", func(_ int, el *colly.HTMLElement) {
 					el.ForEach("div", func(_ int, el *colly.HTMLElement) {
 						//fmt.Println(el.Text)
+						value := strings.TrimSpace(el.Text)
 						if _, ok := galleryInfo.TagList[localKey]; ok {
-							galleryInfo.TagList[localKey] = append(galleryInfo.TagList[localKey], el.Text)
+							galleryInfo.TagList[localKey] = append(galleryInfo.TagList[localKey], value)
 						} else {
-							galleryInfo.TagList[localKey] = []string{el.Text}
+							galleryInfo.TagList[localKey] = []string{value}
 						}
 					})
 				})

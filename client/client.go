@@ -1,10 +1,16 @@
 package client
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
+	"github.com/chromedp/cdproto/network"
+	"github.com/chromedp/chromedp"
 	"github.com/gocolly/colly/v2"
+	"io"
 	"log"
 	"net/http"
+	"os"
 	"time"
 )
 
@@ -60,10 +66,106 @@ func InitCollector(headers http.Header) *colly.Collector {
 	})
 
 	c.OnResponse(func(r *colly.Response) {
+		//TODO: 重试策略似乎不起效果，需要进一步研究
 		// 重置重试计数为初始值
 		retryCount = 0
 		//log.Println("Visited", r.Request.URL)
 		//fmt.Println(string(r.Body))
 	})
 	return c
+}
+
+// Cookie 以下是使用chromedp的相关代码
+// Cookie 从 Chrome 中使用EditThisCookie导出的 Cookies
+type Cookie struct {
+	Domain     string  `json:"domain"`
+	Expiration float64 `json:"expirationDate"`
+	HostOnly   bool    `json:"hostOnly"`
+	HTTPOnly   bool    `json:"httpOnly"`
+	Name       string  `json:"name"`
+	Path       string  `json:"path"`
+	SameSite   string  `json:"sameSite"`
+	Secure     bool    `json:"secure"`
+	Session    bool    `json:"session"`
+	StoreID    string  `json:"storeId"`
+	Value      string  `json:"value"`
+	ID         int     `json:"id"`
+}
+
+// ReadCookiesFromFile 从文件中读取 Cookies
+func ReadCookiesFromFile(filePath string) ([]Cookie, error) {
+	var cookies []Cookie
+
+	file, err := os.Open(filePath)
+	if err != nil {
+		return nil, err
+	}
+	defer func(file *os.File) {
+		err := file.Close()
+		if err != nil {
+			log.Fatal(err)
+		}
+	}(file)
+
+	data, err := io.ReadAll(file)
+	if err != nil {
+		return nil, err
+	}
+
+	err = json.Unmarshal(data, &cookies)
+	if err != nil {
+		return nil, err
+	}
+
+	return cookies, nil
+}
+
+// ConvertCookies 将从文件中读取的 Cookies 转换为 chromedp 需要的格式
+func ConvertCookies(cookies []Cookie) []*network.CookieParam {
+	cookieParams := make([]*network.CookieParam, len(cookies))
+	for i, cookie := range cookies {
+		cookieParams[i] = &network.CookieParam{
+			Name:     cookie.Name,
+			Value:    cookie.Value,
+			Domain:   cookie.Domain,
+			Path:     cookie.Path,
+			HTTPOnly: cookie.HTTPOnly,
+			Secure:   cookie.Secure,
+		}
+	}
+	return cookieParams
+}
+
+// GetRenderedPage 获取经过JavaScript渲染后的页面
+func GetRenderedPage(url string, cookieParams []*network.CookieParam) ([]byte, error) {
+	opts := append(chromedp.DefaultExecAllocatorOptions[:],
+		chromedp.Flag("headless", true),    // 是否以无头模式运行
+		chromedp.Flag("disable-gpu", true), // 禁用GPU
+		chromedp.Flag("no-sandbox", true),  // 禁用沙盒模式
+		chromedp.Flag("–disable-plugins", true),
+		chromedp.UserAgent(`Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/73.0.3683.103 Safari/537.36`),
+	)
+	allocCtx, cancel := chromedp.NewExecAllocator(context.Background(), opts...)
+	defer cancel()
+
+	ctx, cancel := chromedp.NewContext(
+		allocCtx,
+		chromedp.WithLogf(log.Printf),
+	)
+	defer cancel()
+
+	var htmlContent string
+	err := chromedp.Run(ctx,
+		network.SetCookies(cookieParams),
+		chromedp.Navigate("https://manhua.dmzj.com/chengweiduoxinmodebiyao/"), // 替换为你想要访问的网址
+		// 等待<div class="anim-main_list">节点加载完毕（实际上不好用）
+		//chromedp.WaitVisible("div.anim-main_list", chromedp.ByQuery),
+		// 等待5秒，保证页面加载完毕
+		chromedp.Sleep(5*time.Second),
+		chromedp.OuterHTML("html", &htmlContent),
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return []byte(htmlContent), nil
 }
