@@ -16,6 +16,10 @@ import (
 	"time"
 )
 
+const (
+	imageInOnepage = 40
+)
+
 type GalleryInfo struct {
 	URL        string              `json:"gallery_url"`
 	Title      string              `json:"gallery_title"`
@@ -23,7 +27,11 @@ type GalleryInfo struct {
 	TagList    map[string][]string `json:"tag_list"`
 }
 
-func GetGalleryInfo(c *colly.Collector, galleryUrl string) GalleryInfo {
+func GetGalleryInfo(galleryUrl string) GalleryInfo {
+	c := colly.NewCollector(
+		//模拟浏览器
+		colly.UserAgent(`Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36 Edg/115.0.1901.203`),
+	)
 	var galleryInfo GalleryInfo
 	galleryInfo.TagList = make(map[string][]string)
 	galleryInfo.URL = galleryUrl
@@ -161,20 +169,16 @@ func GetImageInfo(c *colly.Collector, imagePageUrl string) (string, string) {
 	return imageName, imageUrl
 }
 
-func DownloadGallery(cacheFile string, imageInOnepage int, galleryUrl string, onlyInfo bool) {
+func DownloadGallery(infoJson, galleryUrl string, onlyInfo bool) {
 	beginIndex := 0
-	collector := colly.NewCollector(
-		//模拟浏览器
-		colly.UserAgent(`Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36 Edg/115.0.1901.203`),
-	)
 
 	//获取画廊信息
-	galleryInfo := GetGalleryInfo(collector, galleryUrl)
+	galleryInfo := GetGalleryInfo(galleryUrl)
 	fmt.Println("Total Image:", galleryInfo.TotalImage)
 	safeTitle := utils.ToSafeFilename(galleryInfo.Title)
 	fmt.Println(safeTitle)
 
-	if utils.FileExists(filepath.Join(safeTitle, cacheFile)) {
+	if utils.FileExists(filepath.Join(safeTitle, infoJson)) {
 		fmt.Println("发现下载记录")
 		//获取已经下载的图片数量
 		downloadedImageCount := utils.GetFileTotal(safeTitle, []string{".jpg", ".png"})
@@ -182,7 +186,7 @@ func DownloadGallery(cacheFile string, imageInOnepage int, galleryUrl string, on
 		//计算剩余图片数量
 		remainImageCount := galleryInfo.TotalImage - downloadedImageCount
 		if remainImageCount == 0 {
-			fmt.Println("本画廊已经下载完毕")
+			fmt.Println("本gallery已经下载完毕")
 			return
 		} else if remainImageCount < 0 {
 			fmt.Println("下载记录有误！")
@@ -193,7 +197,7 @@ func DownloadGallery(cacheFile string, imageInOnepage int, galleryUrl string, on
 		}
 	} else {
 		//生成缓存文件
-		err := utils.BuildCache(safeTitle, cacheFile, galleryInfo)
+		err := utils.BuildCache(safeTitle, infoJson, galleryInfo)
 		utils.ErrorCheck(err)
 		if onlyInfo {
 			fmt.Println("画廊信息获取完毕，程序自动退出。")
@@ -205,7 +209,7 @@ func DownloadGallery(cacheFile string, imageInOnepage int, galleryUrl string, on
 	var imageDataList []map[string]string
 
 	//重新初始化Collector
-	collector = client.InitCollector(BuildJpegRequestHeaders())
+	collector := client.InitCollector(BuildJpegRequestHeaders())
 
 	sumPage := int(math.Ceil(float64(galleryInfo.TotalImage) / float64(imageInOnepage)))
 	for i := beginIndex; i < sumPage; i++ {

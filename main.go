@@ -8,8 +8,11 @@ import (
 	"github.com/fatih/color"
 	"log"
 	"os"
+	"regexp"
 	"time"
 )
+
+const infoJson = "galleryInfo.json"
 
 var (
 	galleryUrl string
@@ -19,6 +22,21 @@ var (
 	goVersion  string
 	version    = "v1.0.0"
 )
+
+type GalleryDownloader struct{}
+
+func (gd GalleryDownloader) Download(infoJson string, url string, onlyInfo bool) error {
+	// 根据正则表达式判断是哪个软件包的gallery，并调用相应的下载函数
+	if matched, _ := regexp.MatchString(`^https://e-hentai.org/g/[a-z0-9]{7}/[a-z0-9]{10}/$`, url); matched {
+		eh.DownloadGallery(infoJson, url, onlyInfo)
+		//fmt.Println("调用eh包的DownloadGallery函数")
+	} else if matched, _ := regexp.MatchString(`^https://manhua.dmzj.com/[a-z0-9]*/$`, url); matched {
+		//fmt.Println("调用dmzj包的DownloadGallery函数")
+	} else {
+		return fmt.Errorf("未知的url格式：%s", url)
+	}
+	return nil
+}
 
 func initArgsParse() {
 	flag.StringVar(&galleryUrl, "url", "", "待下载的画廊地址（必填）")
@@ -30,10 +48,6 @@ func initArgsParse() {
 }
 
 func main() {
-	//待配置的参数
-	const imageInOnepage = 40
-	const cacheFile = "galleryInfo.json"
-
 	//版本信息
 	args := os.Args
 	if len(args) == 2 && (args[1] == "--version" || args[1] == "-v") {
@@ -69,15 +83,24 @@ func main() {
 	//记录开始时间
 	startTime := time.Now()
 
+	//创建下载器
+	downloader := GalleryDownloader{}
+	//设置输出颜色
 	success := color.New(color.Bold, color.FgGreen).FprintlnFunc()
+	fail := color.New(color.Bold, color.FgRed).FprintlnFunc()
+
 	for _, url := range galleryUrlList {
 		success(os.Stdout, "开始下载gallery:", url)
-		eh.DownloadGallery(cacheFile, imageInOnepage, url, onlyInfo)
-		success(os.Stdout, "gallery下载完毕:", url)
+		err := downloader.Download(infoJson, url, onlyInfo)
+		if err != nil {
+			fail(os.Stderr, "下载失败:", err, "\n")
+			continue
+		}
+		success(os.Stdout, "gallery下载完毕:", url, "\n")
 	}
 
 	//记录结束时间
 	endTime := time.Now()
 	//计算执行时间，单位为秒
-	success(os.Stdout, "所有文件下载完毕，共耗时:", endTime.Sub(startTime).Seconds(), "秒")
+	success(os.Stdout, "所有gallery下载完毕，共耗时:", endTime.Sub(startTime).Seconds(), "秒")
 }
