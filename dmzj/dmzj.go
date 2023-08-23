@@ -1,7 +1,7 @@
 package dmzj
 
 import (
-	"EH_downloader/utils"
+	"ComicDownloader/utils"
 	"fmt"
 )
 

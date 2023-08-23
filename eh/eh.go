@@ -1,8 +1,8 @@
 package eh
 
 import (
-	"EH_downloader/client"
-	"EH_downloader/utils"
+	"ComicDownloader/client"
+	"ComicDownloader/utils"
 	"fmt"
 	"github.com/gocolly/colly/v2"
 	"github.com/spf13/cast"

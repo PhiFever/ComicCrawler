@@ -1,4 +1,4 @@
-module EH_downloader
+module ComicDownloader
 
 go 1.21
 
@@ -7,7 +7,7 @@ require (
 	github.com/fatih/color v1.15.0
 	github.com/gocolly/colly/v2 v2.1.0
 	github.com/spf13/cast v1.5.1
-	github.com/stretchr/testify v1.3.0
+	github.com/stretchr/testify v1.8.4
 )
 
 require (
@@ -30,4 +30,5 @@ require (
 	golang.org/x/text v0.7.0 // indirect
 	google.golang.org/appengine v1.6.6 // indirect
 	google.golang.org/protobuf v1.24.0 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

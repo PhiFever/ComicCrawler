@@ -1,8 +1,8 @@
 package main
 
 import (
-	"EH_downloader/eh"
-	"EH_downloader/utils"
+	"ComicDownloader/eh"
+	"ComicDownloader/utils"
 	"flag"
 	"fmt"
 	"github.com/fatih/color"
