@@ -162,7 +162,7 @@ func BuildJpegRequestHeaders() http.Header {
 	return headers
 }
 
-func GetImageInfo(c *colly.Collector, imagePageUrl string) (string, string) {
+func GetImageInfoFromPage(c *colly.Collector, imagePageUrl string) (string, string) {
 	imageIndex := imagePageUrl[strings.LastIndex(imagePageUrl, "-")+1:]
 	imageUrl := GetImageUrl(c, imagePageUrl)
 	imageSuffix := imageUrl[strings.LastIndex(imageUrl, "."):]
@@ -207,7 +207,7 @@ func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
 	}
 
 	//创建map{'imageName':imageName,'imageUrl':imageUrl}
-	var imageDataList []map[string]string
+	var imageInfoMap []map[string]string
 
 	//重新初始化Collector
 	collector := client.InitCollector(BuildJpegRequestHeaders())
@@ -220,12 +220,12 @@ func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
 		imagePageUrls := GetAllImagePageUrl(collector, indexUrl)
 
 		//清空imageDataList中的数据
-		imageDataList = []map[string]string{}
+		imageInfoMap = []map[string]string{}
 
 		//根据imagePageUrls获取imageDataList
 		for _, imagePageUrl := range imagePageUrls {
-			imageName, imageUrl := GetImageInfo(collector, imagePageUrl)
-			imageDataList = append(imageDataList, map[string]string{
+			imageName, imageUrl := GetImageInfoFromPage(collector, imagePageUrl)
+			imageInfoMap = append(imageInfoMap, map[string]string{
 				"imageName": imageName,
 				"imageUrl":  imageUrl,
 			})
@@ -236,7 +236,7 @@ func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
 		time.Sleep(time.Duration(sleepTime) * time.Second)
 
 		// 进行本次处理目录中所有图片的批量保存
-		err := utils.SaveImages(collector, imageDataList, safeTitle)
+		err := utils.SaveImages(collector, imageInfoMap, safeTitle)
 		utils.ErrorCheck(err)
 
 		//防止被ban，每保存一篇目录就sleep 5-15 seconds

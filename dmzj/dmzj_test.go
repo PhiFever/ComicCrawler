@@ -2,11 +2,17 @@ package dmzj
 
 import (
 	"ComicCrawler/client"
+	"github.com/PuerkitoBio/goquery"
 	"reflect"
 	"testing"
 )
 
 const localCookiesPath = "../cookies.json"
+
+var (
+	cookies, _   = client.ReadCookiesFromFile(localCookiesPath)
+	cookiesParam = client.ConvertCookies(cookies)
+)
 
 func TestGetGalleryInfo(t *testing.T) {
 	tests := []struct {
@@ -36,7 +42,7 @@ func TestGetGalleryInfo(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			doc := client.GetHtmlDoc(localCookiesPath, tt.galleryUrl)
+			doc := client.GetHtmlDoc(cookiesParam, tt.galleryUrl)
 			if got := GetGalleryInfo(doc, tt.galleryUrl); !reflect.DeepEqual(got, tt.want) {
 				if got.Title != tt.want.Title {
 					t.Errorf("title got: %v, want: %v", got.Title, tt.want.Title)
@@ -56,6 +62,43 @@ func TestGetGalleryInfo(t *testing.T) {
 						}
 					}
 				}
+			}
+		})
+	}
+}
+
+func TestGetAllImagePageUrl(t *testing.T) {
+	type args struct {
+		doc *goquery.Document
+	}
+	tests := []struct {
+		name string
+		args args
+		want []map[int]string
+	}{
+		{
+			name: "成为夺心魔的必要",
+			args: args{
+				doc: client.GetHtmlDoc(cookiesParam, "https://manhua.dmzj.com/chengweiduoxinmodebiyao/"),
+			},
+			want: []map[int]string{
+				{
+					148: "https://manhua.dmzj.com/chengweiduoxinmodebiyao/139388.shtml#1",
+				},
+				{
+					147: "https://manhua.dmzj.com/chengweiduoxinmodebiyao/138862.shtml#1",
+				},
+				{
+					146: "https://manhua.dmzj.com/chengweiduoxinmodebiyao/138033.shtml#1",
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := GetAllImagePageInfo(tt.args.doc)[0:3]
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("GetAllImagePageInfo() = %v, want %v", got, tt.want)
 			}
 		})
 	}

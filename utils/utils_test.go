@@ -1,10 +1,9 @@
 package utils
 
 import (
-	"EH_downloader/client"
 	"fmt"
+	"github.com/gocolly/colly/v2"
 	"github.com/spf13/cast"
-	"net/http"
 	"path/filepath"
 	"reflect"
 	"testing"
@@ -180,9 +179,9 @@ func TestReadListFile(t *testing.T) {
 }
 
 func TestSaveImages(t *testing.T) {
-	headers := make(http.Header)
-	headers.Set(`User-Agent`, `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.82`)
-	c := client.InitCollector(headers)
+	c := colly.NewCollector(
+		colly.UserAgent(`Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/73.0.3683.103 Safari/537.36`),
+	)
 	absPath, err := filepath.Abs(saveDir)
 	fmt.Println(absPath)
 	if err != nil {
@@ -197,5 +196,58 @@ func TestSaveImages(t *testing.T) {
 		if !FileExists(imagePath) {
 			t.Errorf("image not exists: %s", imagePath)
 		}
+	}
+}
+
+func TestExtractNumberFromText(t *testing.T) {
+	type args struct {
+		pattern string
+		text    string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    string
+		wantErr bool
+	}{
+		{
+			name: "第08话",
+			args: args{
+				pattern: `第(\d+)话`,
+				text:    "第08话",
+			},
+			want:    "08",
+			wantErr: false,
+		},
+		{
+			name: "第37话叉尾猫",
+			args: args{
+				pattern: `第(\d+)话`,
+				text:    "第37话叉尾猫",
+			},
+			want:    "37",
+			wantErr: false,
+		},
+		{
+			name: "错误测试",
+			args: args{
+				pattern: `第(\d+)话`,
+				text:    "sdasf",
+			},
+			want:    "",
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ExtractNumberFromText(tt.args.pattern, tt.args.text)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ExtractNumberFromText() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("ExtractNumberFromText() got = %v, want %v", got, tt.want)
+			}
+		})
 	}
 }

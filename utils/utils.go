@@ -8,6 +8,7 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -212,4 +213,19 @@ func SaveImages(baseCollector *colly.Collector, imageDataList []map[string]strin
 	}
 
 	return nil
+}
+
+func ExtractNumberFromText(pattern string, text string) (string, error) {
+	regex, err := regexp.Compile(pattern)
+	if err != nil {
+		return "", err
+	}
+
+	match := regex.FindStringSubmatch(text)
+	if match != nil {
+		number := match[1]
+		return number, nil
+	} else {
+		return "", fmt.Errorf("在pattern中未找到匹配的数字")
+	}
 }

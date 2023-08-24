@@ -2,6 +2,7 @@ package client
 
 import (
 	"ComicCrawler/utils"
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -160,7 +161,7 @@ func GetRenderedPage(url string, cookieParams []*network.CookieParam) ([]byte, e
 	var htmlContent string
 	err := chromedp.Run(ctx,
 		network.SetCookies(cookieParams),
-		chromedp.Navigate("https://manhua.dmzj.com/chengweiduoxinmodebiyao/"), // 替换为你想要访问的网址
+		chromedp.Navigate(url), // 替换为你想要访问的网址
 		// 等待<div class="anim-main_list">节点加载完毕（实际上不好用）
 		//chromedp.WaitVisible("div.anim-main_list", chromedp.ByQuery),
 		// 等待5秒，保证页面加载完毕
@@ -175,29 +176,27 @@ func GetRenderedPage(url string, cookieParams []*network.CookieParam) ([]byte, e
 }
 
 // GetHtmlDoc 读取cookies文件，获取经过JavaScript渲染后的页面
-func GetHtmlDoc(cookiesPath string, galleryUrl string) *goquery.Document {
+func GetHtmlDoc(cookiesParam []*network.CookieParam, galleryUrl string) *goquery.Document {
 	//实际使用时的代码
-	//cookies, err := ReadCookiesFromFile(cookiesPath)
-	//utils.ErrorCheck(err)
-	//htmlContent, err := GetRenderedPage(galleryUrl, ConvertCookies(cookies))
-	//// 将 []byte 转换为 io.Reader
-	//reader := bytes.NewReader(htmlContent)
-	//doc, err := goquery.NewDocumentFromReader(reader)
-	//utils.ErrorCheck(err)
+	htmlContent, err := GetRenderedPage(galleryUrl, cookiesParam)
+	// 将 []byte 转换为 io.Reader
+	reader := bytes.NewReader(htmlContent)
+	doc, err := goquery.NewDocumentFromReader(reader)
+	utils.ErrorCheck(err)
 
-	//TODO: 以下代码是为了方便调试，实际使用时需要注释掉
-	//获取当前路径
-	dir, err := os.Getwd()
-	utils.ErrorCheck(err)
-	var htmlCachePath string
-	if dir == `E:\Go_project\WorkSpace\ComicCrawler\dmzj` {
-		htmlCachePath = `../static/dmzj_chromedp.html`
-	} else if dir == `E:\Go_project\WorkSpace\ComicCrawler` {
-		htmlCachePath = `./static/dmzj_chromedp.html`
-	}
-	htmlContent, _ := os.Open(htmlCachePath)
-	doc, err := goquery.NewDocumentFromReader(htmlContent)
-	utils.ErrorCheck(err)
+	////TODO: 以下代码是为了方便调试，实际使用时需要注释掉
+	////获取当前路径
+	//dir, err := os.Getwd()
+	//utils.ErrorCheck(err)
+	//var htmlCachePath string
+	//if dir == `E:\Go_project\WorkSpace\ComicCrawler\dmzj` {
+	//	htmlCachePath = `../static/dmzj_chromedp.html`
+	//} else if dir == `E:\Go_project\WorkSpace\ComicCrawler` {
+	//	htmlCachePath = `./static/dmzj_chromedp.html`
+	//}
+	//htmlContent, _ := os.Open(htmlCachePath)
+	//doc, err := goquery.NewDocumentFromReader(htmlContent)
+	//utils.ErrorCheck(err)
 
 	return doc
 }
