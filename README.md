@@ -33,25 +33,25 @@
 ##  使用说明
 1. 获取详细说明（对应的短参数名）
 ```powershell
-./comic_downloader.exe -h
+./comic_crawler.exe -h
 ```
 2. 获取gallery信息，并下载图片
 ```powershell
-./comic_downloader.exe -url https://e-hentai.org/g/xxxxxx/xxxxxxxxxx/
+./comic_crawler.exe -url https://e-hentai.org/g/xxxxxx/xxxxxxxxxx/
 ```
 3. 只获取gallery信息，不下载图片
 ```powershell
-./comic_downloader.exe -url https://e-hentai.org/g/xxxxxx/xxxxxxxxxx/ -info true
+./comic_crawler.exe -url https://e-hentai.org/g/xxxxxx/xxxxxxxxxx/ -info true
 ```
 4. 下载gallery列表中的所有gallery（不能与-url一起使用）
 ```powershell
-./comic_downloader.exe -list gallery_list.txt
+./comic_crawler.exe -list gallery_list.txt
 ```
 ## 编译release版本命令
 
 ```powershell
-go build -ldflags="-s -w" -ldflags "-X 'main.buildTime=$(git show -s --format=%cd)' -X 'main.goVersion=$(go version)'" -o comic_downloader.exe main.go
+go build -ldflags="-s -w" -ldflags "-X 'main.buildTime=$(git show -s --format=%cd)' -X 'main.goVersion=$(go version)'" -o comic_crawler.exe main.go
 ```
 ```powershell
-go build -ldflags "-X 'main.buildTime=$(git show -s --format=%cd)' -X 'main.goVersion=$(go version)'" -o comic_downloader.exe main.go
+go build -ldflags "-X 'main.buildTime=$(git show -s --format=%cd)' -X 'main.goVersion=$(go version)'" -o comic_crawler.exe main.go
 ```

@@ -2,7 +2,6 @@ package eh
 
 import (
 	"fmt"
-	"github.com/gocolly/colly/v2"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -25,11 +24,9 @@ func TestGetGalleryInfo(t *testing.T) {
 		},
 	}
 
-	c := colly.NewCollector()
-
 	for _, tc := range testCases {
 		t.Run(tc.url, func(t *testing.T) {
-			galleryInfo := GetGalleryInfo(c, tc.url)
+			galleryInfo := GetGalleryInfo(tc.url)
 			assert.Equal(t, tc.expectedTitle, galleryInfo.Title, "Title mismatch")
 			assert.Equal(t, tc.expectedMaxPage, galleryInfo.TotalImage, "TotalImage mismatch")
 		})

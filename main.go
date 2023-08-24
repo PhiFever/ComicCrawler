@@ -1,9 +1,9 @@
 package main
 
 import (
-	"ComicDownloader/dmzj"
-	"ComicDownloader/eh"
-	"ComicDownloader/utils"
+	"ComicCrawler/dmzj"
+	"ComicCrawler/eh"
+	"ComicCrawler/utils"
 	"flag"
 	"fmt"
 	"github.com/fatih/color"
@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-const infoJson = "galleryInfo.json"
+const infoJsonPath = "galleryInfo.json"
 
 var (
 	galleryUrl string
@@ -93,7 +93,7 @@ func main() {
 
 	for _, url := range galleryUrlList {
 		success(os.Stdout, "开始下载gallery:", url)
-		err := downloader.Download(infoJson, url, onlyInfo)
+		err := downloader.Download(infoJsonPath, url, onlyInfo)
 		if err != nil {
 			fail(os.Stderr, "下载失败:", err, "\n")
 			continue

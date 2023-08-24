@@ -1,8 +1,8 @@
 package eh
 
 import (
-	"ComicDownloader/client"
-	"ComicDownloader/utils"
+	"ComicCrawler/client"
+	"ComicCrawler/utils"
 	"fmt"
 	"github.com/gocolly/colly/v2"
 	"github.com/spf13/cast"
@@ -170,7 +170,7 @@ func GetImageInfo(c *colly.Collector, imagePageUrl string) (string, string) {
 	return imageName, imageUrl
 }
 
-func DownloadGallery(infoJson, galleryUrl string, onlyInfo bool) {
+func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
 	beginIndex := 0
 
 	//获取画廊信息
@@ -179,7 +179,7 @@ func DownloadGallery(infoJson, galleryUrl string, onlyInfo bool) {
 	safeTitle := utils.ToSafeFilename(galleryInfo.Title)
 	fmt.Println(safeTitle)
 
-	if utils.FileExists(filepath.Join(safeTitle, infoJson)) {
+	if utils.FileExists(filepath.Join(safeTitle, infoJsonPath)) {
 		fmt.Println("发现下载记录")
 		//获取已经下载的图片数量
 		downloadedImageCount := utils.GetFileTotal(safeTitle, []string{".jpg", ".png"})
@@ -198,7 +198,7 @@ func DownloadGallery(infoJson, galleryUrl string, onlyInfo bool) {
 		}
 	} else {
 		//生成缓存文件
-		err := utils.BuildCache(safeTitle, infoJson, galleryInfo)
+		err := utils.BuildCache(safeTitle, infoJsonPath, galleryInfo)
 		utils.ErrorCheck(err)
 		if onlyInfo {
 			fmt.Println("画廊信息获取完毕，程序自动退出。")

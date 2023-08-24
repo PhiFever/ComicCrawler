@@ -1,35 +1,30 @@
 package dmzj
 
 import (
-	"ComicDownloader/utils"
+	"ComicCrawler/client"
+	"ComicCrawler/utils"
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
-	"os"
+	"github.com/spf13/cast"
+	"path/filepath"
+	"regexp"
 	"strings"
 )
 
+const cookiesPath = `cookies.json`
+
 type GalleryInfo struct {
-	URL   string `json:"gallery_url"`
-	Title string `json:"gallery_title"`
-	//最新章节
-	LastChapter string              `json:"last_chapter"`
-	TagList     map[string][]string `json:"tag_list"`
+	URL            string              `json:"gallery_url"`
+	Title          string              `json:"gallery_title"`
+	LastChapter    string              `json:"last_chapter"`
+	LastUpdateTime string              `json:"last_update_time"`
+	TagList        map[string][]string `json:"tag_list"`
 }
 
-func GetGalleryInfo(galleryUrl string) GalleryInfo {
+func GetGalleryInfo(doc *goquery.Document, galleryUrl string) GalleryInfo {
 	var galleryInfo GalleryInfo
 	galleryInfo.TagList = make(map[string][]string)
 	galleryInfo.URL = galleryUrl
-
-	//cookies, err := client.ReadCookiesFromFile("../cookies.json")
-	//utils.ErrorCheck(err)
-	//htmlContent, err := client.GetRenderedPage(galleryUrl, client.ConvertCookies(cookies))
-	//// 将 []byte 转换为 io.Reader
-	//reader := bytes.NewReader(htmlContent)
-	//doc, err := goquery.NewDocumentFromReader(reader)
-
-	htmlContent, _ := os.Open("../static/dmzj_chromedp.html")
-	doc, err := goquery.NewDocumentFromReader(htmlContent)
 
 	rp := strings.NewReplacer(">>", "")
 	//找到其中<div class="wrap">下的<div class="path_lv3">元素中的最后一个文本节点即为标题
@@ -42,22 +37,66 @@ func GetGalleryInfo(galleryUrl string) GalleryInfo {
 	doc.Find(".anim-main_list table tbody tr").Each(func(index int, row *goquery.Selection) {
 		key := strings.TrimSpace(row.Find("th").Text())
 		localKey := rp.Replace(key)
-		value := strings.TrimSpace(row.Find("td").Text())
-		if _, ok := galleryInfo.TagList[localKey]; ok {
-			galleryInfo.TagList[localKey] = append(galleryInfo.TagList[localKey], value)
-		} else {
-			//TODO 有些标签是多值的，需要处理
-			galleryInfo.TagList[localKey] = []string{value}
-		}
+		row.Find("td").Each(func(index int, cell *goquery.Selection) {
+			cell.Find("a").Each(func(index int, a *goquery.Selection) {
+				galleryInfo.TagList[localKey] = append(galleryInfo.TagList[localKey], strings.TrimSpace(a.Text()))
+			})
+			//找到最后更新时间
+			cell.Find("span").Each(func(index int, span *goquery.Selection) {
+				galleryInfo.LastUpdateTime = strings.TrimSpace(span.Text())
+			})
+		})
 	})
-	utils.ErrorCheck(err)
 
+	rp = strings.NewReplacer("第", "", "话", "")
+	lastChapter, _ := regexp.MatchString(`第(\d+)话`, galleryInfo.TagList["最新收录"][0])
+	if lastChapter {
+		galleryInfo.LastChapter = rp.Replace(galleryInfo.TagList["最新收录"][0])
+	} else {
+		galleryInfo.LastChapter = "未知"
+	}
 	return galleryInfo
 }
 
-func DownloadGallery(infoJson string, galleryUrl string, onlyInfo bool) {
+func GetAllImagePageUrl(doc *goquery.Document) []string {
+	var imagePageUrl []string
+	//找到<div class="cartoon_online_border">
+	doc.Find("div.cartoon_online_border").Each(func(i int, s *goquery.Selection) {
+
+	})
+	return imagePageUrl
+}
+
+func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
+	beginIndex := 0
+	doc := client.GetHtmlDoc(cookiesPath, galleryUrl)
 	//获取画廊信息
-	galleryInfo := GetGalleryInfo(galleryUrl)
+	galleryInfo := GetGalleryInfo(doc, galleryUrl)
 	safeTitle := utils.ToSafeFilename(galleryInfo.Title)
 	fmt.Println(safeTitle)
+
+	if utils.FileExists(filepath.Join(safeTitle, infoJsonPath)) {
+		fmt.Println("发现下载记录")
+		//读取缓存文件
+		var lastGalleryInfo GalleryInfo
+		err := utils.LoadCache(filepath.Join(safeTitle, infoJsonPath), &lastGalleryInfo)
+		utils.ErrorCheck(err)
+		if lastGalleryInfo.LastChapter == galleryInfo.LastChapter {
+			fmt.Println("本gallery已经下载完毕")
+			return
+		} else {
+			fmt.Println("发现更新，继续下载更新部分")
+			beginIndex = cast.ToInt(lastGalleryInfo.LastChapter)
+		}
+	} else {
+		//生成缓存文件
+		err := utils.BuildCache(safeTitle, infoJsonPath, galleryInfo)
+		utils.ErrorCheck(err)
+		if onlyInfo {
+			fmt.Println("画廊信息获取完毕，程序自动退出。")
+			return
+		}
+	}
+
+	fmt.Println(beginIndex)
 }
