@@ -103,3 +103,36 @@ func TestGetAllImagePageUrl(t *testing.T) {
 		})
 	}
 }
+
+func TestGetImageUrlFromPage(t *testing.T) {
+	type args struct {
+		doc *goquery.Document
+	}
+	tests := []struct {
+		name string
+		args args
+		want string
+	}{
+		{
+			name: "02话",
+			args: args{
+				doc: client.GetHtmlDoc(cookiesParam, "https://manhua.dmzj.com/chengweiduoxinmodebiyao/102022.shtml#1"),
+			},
+			want: "https://images.idmzj.com/c%2F%E6%88%90%E4%B8%BA%E5%A4%BA%E5%BF%83%E9%AD%94%E7%9A%84%E5%BF%85%E8%A6%81%2F%E7%AC%AC02%E8%AF%9D_1597930984%2F41.jpg",
+		},
+		{
+			name: "137话",
+			args: args{
+				doc: client.GetHtmlDoc(cookiesParam, "https://manhua.dmzj.com/chengweiduoxinmodebiyao/135075.shtml#1"),
+			},
+			want: "https://images.idmzj.com/c%2F%E6%88%90%E4%B8%BA%E5%A4%BA%E5%BF%83%E9%AD%94%E7%9A%84%E5%BF%85%E8%A6%81%2F%E7%AC%AC137%E8%AF%9D%2F137%E7%A0%94%E7%A9%B6%E6%9D%90%E6%96%99%20%E6%8B%B7%E8%B4%9D.jpg",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := GetImageUrlFromPage(tt.args.doc); got != tt.want {
+				t.Errorf("GetImageUrlFromPage() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

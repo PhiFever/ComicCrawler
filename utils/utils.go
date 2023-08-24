@@ -185,8 +185,8 @@ func ReadListFile(filePath string) ([]string, error) {
 	return list, nil
 }
 
-// SaveImages 保存imageDataList中的所有图片，imageDataList中的每个元素都是一个map，包含两个键值对，imageName和imageUrl
-func SaveImages(baseCollector *colly.Collector, imageDataList []map[string]string, saveDir string) error {
+// SaveImages 保存imageDataList中的所有图片，imageInfoMap中的每个元素都是一个map，包含两个键值对，imageName和imageUrl
+func SaveImages(baseCollector *colly.Collector, imageInfoMap []map[string]string, saveDir string) error {
 	dir, err := filepath.Abs(saveDir)
 	err = os.MkdirAll(dir, os.ModePerm)
 	ErrorCheck(err)
@@ -197,7 +197,7 @@ func SaveImages(baseCollector *colly.Collector, imageDataList []map[string]strin
 		imageContent = r.Body
 	})
 
-	for _, data := range imageDataList {
+	for _, data := range imageInfoMap {
 		imageName := data["imageName"]
 		imageUrl := data["imageUrl"]
 		filePath, err := filepath.Abs(filepath.Join(dir, imageName))

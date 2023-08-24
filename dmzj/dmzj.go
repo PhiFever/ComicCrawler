@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
 	"github.com/spf13/cast"
-	"log"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -90,9 +89,16 @@ func GetAllImagePageInfo(doc *goquery.Document) []map[int]string {
 }
 
 // GetImageUrlFromPage 从单个图片页获取图片地址
-func GetImageUrlFromPage(doc *goquery.Document) []string {
+func GetImageUrlFromPage(doc *goquery.Document) string {
+	var imageUrl string
 	//找到<div class="comic_wraCon autoHeight"
-	var imageUrl []string
+	doc.Find("div.comic_wraCon.autoHeight").Each(func(i int, s *goquery.Selection) {
+		//找到<img>的src属性
+		src, exists := s.Find("img").Attr("src")
+		if exists {
+			imageUrl = src
+		}
+	})
 	return imageUrl
 }
 
@@ -143,13 +149,13 @@ func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
 	fmt.Println("beginIndex= ", beginIndex)
 	imagePageInfoMap := GetAllImagePageInfo(menuDoc)[beginIndex:]
 
-	//测试用
-	for _, info := range imagePageInfoMap {
-		for index, url := range info {
-			fmt.Println(index, url)
-		}
-	}
-	log.Println("imagePageInfoMap length:", len(imagePageInfoMap))
+	////测试用
+	//for _, info := range imagePageInfoMap {
+	//	for index, url := range info {
+	//		fmt.Println(index, url)
+	//	}
+	//}
+	//log.Println("imagePageInfoMap length:", len(imagePageInfoMap))
 
 	tasks := make(chan map[int]string, len(imagePageInfoMap))
 	for _, info := range imagePageInfoMap {
@@ -168,6 +174,10 @@ func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
 			for info := range tasks {
 				for index, url := range info {
 					fmt.Println(index, url)
+					pageDoc := client.GetHtmlDoc(cookiesParam, url)
+					//获取图片地址
+					imageUrl := GetImageUrlFromPage(pageDoc)
+					fmt.Println(imageUrl)
 				}
 			}
 		}()
