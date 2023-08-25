@@ -169,7 +169,7 @@ func GetRenderedPage(url string, cookieParams []*network.CookieParam) ([]byte, e
 		chromedp.Sleep(5*time.Second),
 		chromedp.OuterHTML("html", &htmlContent),
 	)
-	log.Println("页面渲染完毕", url)
+	log.Println("渲染完毕", url)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -184,20 +184,5 @@ func GetHtmlDoc(cookiesParam []*network.CookieParam, galleryUrl string) *goquery
 	reader := bytes.NewReader(htmlContent)
 	doc, err := goquery.NewDocumentFromReader(reader)
 	utils.ErrorCheck(err)
-
-	////TODO: 以下代码是为了方便调试，实际使用时需要注释掉
-	////获取当前路径
-	//dir, err := os.Getwd()
-	//utils.ErrorCheck(err)
-	//var htmlCachePath string
-	//if dir == `E:\Go_project\WorkSpace\ComicCrawler\dmzj` {
-	//	htmlCachePath = `../static/dmzj_chromedp.html`
-	//} else if dir == `E:\Go_project\WorkSpace\ComicCrawler` {
-	//	htmlCachePath = `./static/dmzj_chromedp.html`
-	//}
-	//htmlContent, _ := os.Open(htmlCachePath)
-	//doc, err := goquery.NewDocumentFromReader(htmlContent)
-	//utils.ErrorCheck(err)
-
 	return doc
 }

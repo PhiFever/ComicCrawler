@@ -7,16 +7,19 @@ import (
 	"github.com/PuerkitoBio/goquery"
 	"github.com/chromedp/cdproto/network"
 	"github.com/spf13/cast"
+	"log"
 	"net/http"
 	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 )
 
 const (
 	cookiesPath = `cookies.json`
+	numWorkers  = 5  //并发量
 	batchSize   = 20 //每次下载的图片数量
 )
 
@@ -74,7 +77,7 @@ func GetAllImagePageInfo(doc *goquery.Document) []map[int]string {
 			if exists {
 				imageName := strings.TrimSpace(a.Text())
 
-				indexStr, err := utils.ExtractNumberFromText(`第(\d+)话`, imageName)
+				indexStr, err := utils.ExtractSubstringFromText(`第(\d+)话`, imageName)
 				utils.ErrorCheck(err)
 				//cast库在转换时字符串若是以 "0" 开头，"07" 转换后得到整型 7，而 "08" 转换后得到整型 0
 				//https://iokde.com/post/golang-cast64-snare.html
@@ -221,29 +224,36 @@ func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
 			return
 		}
 	}
-
+	fmt.Println(beginIndex)
 	imagePageInfoMap := GetAllImagePageInfo(menuDoc)
-	//sortedImageInfoMap := utils.SortMapsByIntKey(imagePageInfoMap, true)[beginIndex:50] //TODO:测试用
-	sortedImageInfoMap := utils.SortMapsByIntKey(imagePageInfoMap, true)[beginIndex:] //TODO:正式用
+	sortedImageInfoMap := utils.SortMapsByIntKey(imagePageInfoMap, true)[beginIndex:]
 
-	tasks := make(chan map[int]string, len(sortedImageInfoMap))
-	imageInfoChannel := make(chan map[string]string, len(sortedImageInfoMap))
-	var imageInfoMap []map[string]string
+	//按batchSize分组获取url并保存图片
+	for batchIndex := 0; batchIndex < len(sortedImageInfoMap); batchIndex += batchSize {
+		subImageInfoMap := sortedImageInfoMap[batchIndex:utils.MinInt(batchIndex+batchSize, len(sortedImageInfoMap))]
+		tasks := make(chan map[int]string, len(subImageInfoMap))
+		imageInfoChannel := make(chan map[string]string, len(subImageInfoMap))
+		var imageInfoMap []map[string]string
 
-	//TODO:把原来的imagePageInfoMap拆分成20个为一组的map，每处理一个map就下载返回的结果
-	for _, info := range sortedImageInfoMap {
-		tasks <- info
+		for _, info := range subImageInfoMap {
+			tasks <- info
+		}
+		close(tasks)
+
+		syncParsePage(tasks, imageInfoChannel, cookiesParam, numWorkers)
+		for i := 0; i < len(subImageInfoMap); i++ {
+			imageInfo := <-imageInfoChannel
+			imageInfoMap = append(imageInfoMap, imageInfo)
+		}
+		// 进行本次处理目录中所有图片的批量保存
+		baseCollector := client.InitCollector(BuildJpegRequestHeaders())
+		err = utils.SaveImages(baseCollector, imageInfoMap, safeTitle)
+		utils.ErrorCheck(err)
+
+		//防止被ban，每保存一组图片就sleep 5-15 seconds
+		sleepTime := utils.TrueRandFloat(5, 15)
+		log.Println("Sleep ", cast.ToString(sleepTime), " seconds...")
+		time.Sleep(time.Duration(sleepTime) * time.Second)
 	}
-	close(tasks)
 
-	syncParsePage(tasks, imageInfoChannel, cookiesParam, 5)
-	for i := 0; i < len(sortedImageInfoMap); i++ {
-		imageInfo := <-imageInfoChannel
-		imageInfoMap = append(imageInfoMap, imageInfo)
-	}
-
-	// 进行本次处理目录中所有图片的批量保存
-	baseCollector := client.InitCollector(BuildJpegRequestHeaders())
-	err = utils.SaveImages(baseCollector, imageInfoMap, safeTitle)
-	utils.ErrorCheck(err)
 }

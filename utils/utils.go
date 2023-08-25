@@ -38,6 +38,13 @@ func ToSafeFilename(in string) string {
 	return rt
 }
 
+func MinInt(x, y int) int {
+	if x < y {
+		return x
+	}
+	return y
+}
+
 // SortMapsByIntKey 用于按照map中的int键值对进行排序
 func SortMapsByIntKey(maps []map[int]string, ascending bool) []map[int]string {
 	getKey := func(m map[int]string) int {
@@ -77,8 +84,7 @@ func SaveFile(filePath string, data []byte) error {
 	return nil
 }
 
-// BuildCache 用于生成utf-8格式的缓存文件
-// data为待写入数据结构
+// BuildCache 用于生成utf-8格式的缓存文件 data为待写入数据结构
 func BuildCache(saveDir string, cacheFile string, data interface{}) error {
 	dir, err := filepath.Abs(saveDir)
 	err = os.MkdirAll(dir, os.ModePerm)
@@ -109,8 +115,7 @@ func BuildCache(saveDir string, cacheFile string, data interface{}) error {
 	return nil
 }
 
-// LoadCache 用于加载utf-8格式的缓存文件
-// result是一个指向目标数据结构的指针
+// LoadCache 用于加载utf-8格式的缓存文件 result是一个指向目标数据结构的指针
 func LoadCache(filePath string, result interface{}) error {
 	// 打开utf-8格式的文件用于读取数据
 	file, err := os.Open(filePath)
@@ -235,7 +240,8 @@ func SaveImages(baseCollector *colly.Collector, imageInfoMap []map[string]string
 	return nil
 }
 
-func ExtractNumberFromText(pattern string, text string) (string, error) {
+// ExtractSubstringFromText 按照Pattern在text里匹配，找到了就返回匹配到的部分
+func ExtractSubstringFromText(pattern string, text string) (string, error) {
 	regex, err := regexp.Compile(pattern)
 	if err != nil {
 		return "", err

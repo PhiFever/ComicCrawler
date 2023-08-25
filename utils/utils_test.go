@@ -240,13 +240,13 @@ func TestExtractNumberFromText(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := ExtractNumberFromText(tt.args.pattern, tt.args.text)
+			got, err := ExtractSubstringFromText(tt.args.pattern, tt.args.text)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("ExtractNumberFromText() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("ExtractSubstringFromText() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if got != tt.want {
-				t.Errorf("ExtractNumberFromText() got = %v, want %v", got, tt.want)
+				t.Errorf("ExtractSubstringFromText() got = %v, want %v", got, tt.want)
 			}
 		})
 	}

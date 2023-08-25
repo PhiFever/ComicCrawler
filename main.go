@@ -21,7 +21,7 @@ var (
 	listFile   string
 	buildTime  string
 	goVersion  string
-	version    = "v1.0.0"
+	version    = "v1.5.0"
 )
 
 type GalleryDownloader struct{}

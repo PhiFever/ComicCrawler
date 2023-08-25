@@ -164,7 +164,10 @@ func GetImageInfoFromPage(c *colly.Collector, imagePageUrl string) (string, stri
 }
 
 func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
+	//目录号
 	beginIndex := 0
+	//余数
+	remainder := 0
 
 	//获取画廊信息
 	galleryInfo := GetGalleryInfo(galleryUrl)
@@ -188,6 +191,7 @@ func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
 		} else {
 			fmt.Println("剩余图片数量:", remainImageCount)
 			beginIndex = int(math.Floor(float64(downloadedImageCount) / float64(imageInOnepage)))
+			remainder = downloadedImageCount - imageInOnepage*beginIndex
 		}
 	} else {
 		//生成缓存文件
@@ -210,7 +214,12 @@ func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
 		fmt.Println("\nCurrent index:", i)
 		indexUrl := GenerateIndexURL(galleryUrl, i)
 		fmt.Println(indexUrl)
-		imagePageUrls := GetAllImagePageUrl(collector, indexUrl)
+		var imagePageUrls []string
+		if i == beginIndex {
+			imagePageUrls = GetAllImagePageUrl(collector, indexUrl)[remainder:]
+		} else {
+			imagePageUrls = GetAllImagePageUrl(collector, indexUrl)
+		}
 
 		//清空imageDataList中的数据
 		imageInfoMap = []map[string]string{}
@@ -232,7 +241,7 @@ func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
 		err := utils.SaveImages(collector, imageInfoMap, safeTitle)
 		utils.ErrorCheck(err)
 
-		//防止被ban，每保存一篇目录就sleep 5-15 seconds
+		//防止被ban，每保存一篇目录中的所有图片就sleep 5-15 seconds
 		sleepTime = utils.TrueRandFloat(5, 15)
 		log.Println("Sleep ", cast.ToString(sleepTime), " seconds...")
 		time.Sleep(time.Duration(sleepTime) * time.Second)
