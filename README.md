@@ -1,16 +1,11 @@
-## Todo
+## 支持站点
+目前支持eh,dmzj
 
-1. [fixed ] Add a `--version` option
-2. [fixed ] 增加缓存上次下载的进度，使下次下载同一gallery时从上次失败的进度开始下载
-3. [fixed ] 增加批量下载功能，从文件中按行读取gallery_url，下载所有的gallery
-4. [fixed ]实现每处理一个主页就下载一次图片，而不是等到所有主页处理完毕后再下载图片
-5. [fixed ]main.saveImages的实现不够优雅，需要重构
-6. [  ]重构相关函数，使主函数能根据传入参数的不同而调用不同网站的支持接口
-7. [  ]增加对exhentai的支持
-8. [fixed ]增加控制台彩色输出
+## 缓存文件格式
 
-缓存文件格式
 `galleryInfo.json`
+
+1. eh
 ```json
 {
     "gallery_url": "https://e-hentai.org/g/xxxxxx/xxxxxxxxxx/",
@@ -29,7 +24,37 @@
     }
 }
 ```
-
+2. dmzj
+```json
+{
+    "gallery_url": "https://manhua.dmzj.com/safdgfbxbxvxc/",
+    "gallery_title": "xxx",
+    "last_chapter": "149",
+    "last_update_time": "2023-08-25",
+    "tag_list": {
+        "作者": [
+            "aaa"
+        ],
+        "分类": [
+            "bbb"
+        ],
+        "地域": [
+            "ccc"
+        ],
+        "最新收录": [
+            "第149话"
+        ],
+        "状态": [
+            "连载中"
+        ],
+        "题材": [
+            "fsv",
+            "cvfhr",
+            "cnczef"
+        ]
+    }
+}
+```
 ##  使用说明
 1. 获取详细说明（对应的短参数名）
 ```powershell
