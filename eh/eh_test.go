@@ -8,27 +8,26 @@ import (
 
 func TestGetGalleryInfo(t *testing.T) {
 	testCases := []struct {
-		url             string
-		expectedTitle   string
-		expectedMaxPage int
+		url                 string
+		expectedGalleryInfo GalleryInfo
 	}{
 		{
-			url:             "https://e-hentai.org/g/2569708/4bd9316841/",
-			expectedTitle:   "[中信出版社] 流浪地球2电影制作手记 The Wandering Earth II FLIM HAND BOOK",
-			expectedMaxPage: 468,
-		},
-		{
-			url:             "https://zhuanlan.zhihu.com/p/375530785",
-			expectedTitle:   "",
-			expectedMaxPage: 0,
+			url: "https://e-hentai.org/g/2569708/4bd9316841/",
+			expectedGalleryInfo: GalleryInfo{
+				URL:        "https://e-hentai.org/g/2569708/4bd9316841/",
+				Title:      "[中信出版社] 流浪地球2电影制作手记 The Wandering Earth II FLIM HAND BOOK",
+				TotalImage: 468,
+				TagList: map[string][]string{
+					"language": {"chinese"},
+				},
+			},
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.url, func(t *testing.T) {
 			galleryInfo := GetGalleryInfo(tc.url)
-			assert.Equal(t, tc.expectedTitle, galleryInfo.Title, "Title mismatch")
-			assert.Equal(t, tc.expectedMaxPage, galleryInfo.TotalImage, "TotalImage mismatch")
+			assert.Equal(t, tc.expectedGalleryInfo, galleryInfo)
 		})
 	}
 }

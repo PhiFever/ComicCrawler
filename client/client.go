@@ -141,7 +141,8 @@ func ConvertCookies(cookies []Cookie) []*network.CookieParam {
 
 // GetRenderedPage 获取经过JavaScript渲染后的页面
 func GetRenderedPage(url string, cookieParams []*network.CookieParam) ([]byte, error) {
-	log.Println("正在渲染页面...", url)
+	log.Println("正在渲染页面:", url)
+	//ctx := buildChromeCTX()
 	opts := append(chromedp.DefaultExecAllocatorOptions[:],
 		chromedp.Flag("headless", true),    // 是否以无头模式运行
 		chromedp.Flag("disable-gpu", true), // 禁用GPU
@@ -168,7 +169,7 @@ func GetRenderedPage(url string, cookieParams []*network.CookieParam) ([]byte, e
 		chromedp.Sleep(5*time.Second),
 		chromedp.OuterHTML("html", &htmlContent),
 	)
-	log.Println("页面渲染完毕")
+	log.Println("页面渲染完毕", url)
 	if err != nil {
 		log.Fatal(err)
 	}
