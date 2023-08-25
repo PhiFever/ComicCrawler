@@ -17,6 +17,7 @@ import (
 
 const (
 	cookiesPath = `cookies.json`
+	batchSize   = 20 //每次下载的图片数量
 )
 
 type GalleryInfo struct {
@@ -63,7 +64,7 @@ func GetGalleryInfo(doc *goquery.Document, galleryUrl string) GalleryInfo {
 	return galleryInfo
 }
 
-// GetAllImagePageInfo 从主目录页获取所有图片页地址
+// GetAllImagePageInfo 从主目录页获取所有图片页地址，返回一个切片，元素为map[int]string，key为图片页序号，value为图片页地址
 func GetAllImagePageInfo(doc *goquery.Document) []map[int]string {
 	var imagePageInfoMap []map[int]string
 	// 找到<div class="cartoon_online_border">
@@ -87,7 +88,6 @@ func GetAllImagePageInfo(doc *goquery.Document) []map[int]string {
 		})
 	})
 
-	//TODO:对imagePageInfoMap按key值进行排序，否则下载的图片顺序会乱
 	return imagePageInfoMap
 }
 
@@ -105,7 +105,7 @@ func GetImageUrlFromPage(doc *goquery.Document) string {
 	return imageUrl
 }
 
-// 并发sync.WaitGroup解析页面
+// 并发sync.WaitGroup解析页面，获取图片地址，并发量为numWorkers
 func syncParsePage(tasks <-chan map[int]string, imageInfoChannel chan<- map[string]string, cookiesParam []*network.CookieParam, numWorkers int) {
 	var wg sync.WaitGroup
 
@@ -222,28 +222,22 @@ func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
 		}
 	}
 
-	imagePageInfoMap := GetAllImagePageInfo(menuDoc)[beginIndex:20]
+	imagePageInfoMap := GetAllImagePageInfo(menuDoc)
+	//sortedImageInfoMap := utils.SortMapsByIntKey(imagePageInfoMap, true)[beginIndex:50] //TODO:测试用
+	sortedImageInfoMap := utils.SortMapsByIntKey(imagePageInfoMap, true)[beginIndex:] //TODO:正式用
 
-	////测试用
-	//for _, info := range imagePageInfoMap {
-	//	for index, url := range info {
-	//		fmt.Println(index, url)
-	//	}
-	//}
-	//log.Println("imagePageInfoMap length:", len(imagePageInfoMap))
+	tasks := make(chan map[int]string, len(sortedImageInfoMap))
+	imageInfoChannel := make(chan map[string]string, len(sortedImageInfoMap))
+	var imageInfoMap []map[string]string
 
-	//TODO:把原来的imagePageInfoMap拆分成多个map，每处理一个map就下载返回的结果
-	tasks := make(chan map[int]string, len(imagePageInfoMap))
-	for _, info := range imagePageInfoMap {
+	//TODO:把原来的imagePageInfoMap拆分成20个为一组的map，每处理一个map就下载返回的结果
+	for _, info := range sortedImageInfoMap {
 		tasks <- info
 	}
 	close(tasks)
 
-	imageInfoChannel := make(chan map[string]string, len(imagePageInfoMap))
-	var imageInfoMap []map[string]string
-
 	syncParsePage(tasks, imageInfoChannel, cookiesParam, 5)
-	for i := 0; i < len(imagePageInfoMap); i++ {
+	for i := 0; i < len(sortedImageInfoMap); i++ {
 		imageInfo := <-imageInfoChannel
 		imageInfoMap = append(imageInfoMap, imageInfo)
 	}
