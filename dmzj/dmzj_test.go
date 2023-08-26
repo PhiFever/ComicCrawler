@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-const localCookiesPath = "../cookies.json"
+const localCookiesPath = "../dmzj_cookies.json"
 
 var (
 	cookies, _   = client.ReadCookiesFromFile(localCookiesPath)

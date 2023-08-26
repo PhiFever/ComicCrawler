@@ -1,6 +1,8 @@
 ## 支持站点
-目前支持eh,dmzj
+目前支持e-hentai.org,manhua.dmzj.com(需要放在同级目录下的cookies.json，可以通过EditThisCookie导出，注意调整翻页模式，使其中的fanyemodeval=2)
 
+## TODO
+1. dmzj目录带分页的情况无法处理
 ## 缓存文件格式
 
 `galleryInfo.json`

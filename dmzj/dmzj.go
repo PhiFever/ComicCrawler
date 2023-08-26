@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	cookiesPath = `cookies.json`
+	cookiesPath = `dmzj_cookies.json`
 	numWorkers  = 5  //并发量
 	batchSize   = 20 //每次下载的图片数量
 )
@@ -95,6 +95,7 @@ func GetAllImagePageInfo(doc *goquery.Document) []map[int]string {
 }
 
 // GetImageUrlFromPage 从单个图片页获取图片地址
+// TODO:bugfix实际的位置应该是<div class="scrollbar-demo-item"，返回的应该是一个[]string
 func GetImageUrlFromPage(doc *goquery.Document) string {
 	var imageUrl string
 	//找到<div class="comic_wraCon autoHeight"
@@ -124,6 +125,7 @@ func syncParsePage(tasks <-chan map[int]string, imageInfoChannel chan<- map[stri
 					//获取图片地址
 					imageUrl := GetImageUrlFromPage(pageDoc)
 					imageSuffix := imageUrl[strings.LastIndex(imageUrl, "."):]
+					//TODO:bugfix 文件名应该以1_0.jpg,1_1.jpg……的方式命名
 					//fmt.Println(imageUrl)
 					imageInfo := map[string]string{
 						"imageName": cast.ToString(index) + imageSuffix,
@@ -224,7 +226,7 @@ func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
 			return
 		}
 	}
-	fmt.Println(beginIndex)
+	fmt.Println("beginIndex=", beginIndex)
 	imagePageInfoMap := GetAllImagePageInfo(menuDoc)
 	sortedImageInfoMap := utils.SortMapsByIntKey(imagePageInfoMap, true)[beginIndex:]
 
