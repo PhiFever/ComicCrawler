@@ -18,9 +18,10 @@ import (
 )
 
 const (
-	cookiesPath = `dmzj_cookies.json`
-	numWorkers  = 5  //并发量
-	batchSize   = 20 //每次下载的图片数量
+	cookiesPath       = `dmzj_cookies.json`
+	numWorkers        = 5  //并发量
+	batchSize         = 10 //每次下载的图片页面数量，建议为numWorkers的整数倍
+	maxImageInOnePage = 20 //单个图片页中最大图片数量
 )
 
 type GalleryInfo struct {
@@ -95,22 +96,24 @@ func GetAllImagePageInfo(doc *goquery.Document) []map[int]string {
 }
 
 // GetImageUrlFromPage 从单个图片页获取图片地址
-// TODO:bugfix实际的位置应该是<div class="scrollbar-demo-item"，返回的应该是一个[]string
-func GetImageUrlFromPage(doc *goquery.Document) string {
-	var imageUrl string
-	//找到<div class="comic_wraCon autoHeight"
-	doc.Find("div.comic_wraCon.autoHeight").Each(func(i int, s *goquery.Selection) {
-		//找到<img>的src属性
-		src, exists := s.Find("img").Attr("src")
-		if exists {
-			imageUrl = src
-		}
+func GetImageUrlFromPage(doc *goquery.Document) []string {
+	var imageUrl []string
+	//找到<div class="scrollbar-demo-item"
+	doc.Find("div.scrollbar-demo-item").Each(func(i int, s *goquery.Selection) {
+		s.Find("img").Each(func(j int, img *goquery.Selection) {
+			src, exists := img.Attr("src")
+			if exists {
+				imageUrl = append(imageUrl, src)
+			}
+		})
 	})
 	return imageUrl
 }
 
-// 并发sync.WaitGroup解析页面，获取图片地址，并发量为numWorkers
-func syncParsePage(tasks <-chan map[int]string, imageInfoChannel chan<- map[string]string, cookiesParam []*network.CookieParam, numWorkers int) {
+// 并发sync.WaitGroup解析页面，获取图片地址，并发量为numWorkers，返回实际获取的图片地址数量(int)
+func syncParsePage(ImageInfoMapChannel <-chan map[int]string, imageInfoChannel chan<- map[string]string,
+	cookiesParam []*network.CookieParam, numWorkers int) int {
+	sumImage := 0
 	var wg sync.WaitGroup
 
 	for i := 0; i < numWorkers; i++ {
@@ -118,26 +121,29 @@ func syncParsePage(tasks <-chan map[int]string, imageInfoChannel chan<- map[stri
 		go func() {
 			defer wg.Done()
 
-			for info := range tasks {
+			for info := range ImageInfoMapChannel {
 				for index, url := range info {
 					//fmt.Println(index, url)
 					pageDoc := client.GetHtmlDoc(cookiesParam, url)
 					//获取图片地址
-					imageUrl := GetImageUrlFromPage(pageDoc)
-					imageSuffix := imageUrl[strings.LastIndex(imageUrl, "."):]
-					//TODO:bugfix 文件名应该以1_0.jpg,1_1.jpg……的方式命名
-					//fmt.Println(imageUrl)
-					imageInfo := map[string]string{
-						"imageName": cast.ToString(index) + imageSuffix,
-						"imageUrl":  imageUrl,
+					imageUrlLists := GetImageUrlFromPage(pageDoc)
+					for i, imageUrl := range imageUrlLists {
+						imageSuffix := imageUrl[strings.LastIndex(imageUrl, "."):]
+						imageInfo := map[string]string{
+							"imageName": cast.ToString(index) + "_" + cast.ToString(i) + imageSuffix,
+							"imageUrl":  imageUrl,
+						}
+						imageInfoChannel <- imageInfo
+						sumImage++
 					}
-					imageInfoChannel <- imageInfo
+
 				}
 			}
 		}()
 	}
 
 	wg.Wait() // 等待所有任务完成
+	return sumImage
 }
 
 func BuildJpegRequestHeaders() http.Header {
@@ -202,21 +208,8 @@ func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
 		} else {
 			fmt.Println("无需更新下载记录")
 		}
-		//获取已经下载的图片数量
-		downloadedImageCount := utils.GetFileTotal(safeTitle, []string{".jpg", ".png"})
-		fmt.Println("Downloaded image count:", downloadedImageCount)
-		//计算剩余图片数量
-		remainImageCount := cast.ToInt(galleryInfo.LastChapter) - downloadedImageCount
-		if remainImageCount == 0 && lastGalleryInfo.LastChapter == galleryInfo.LastChapter {
-			fmt.Println("本gallery已经下载完毕")
-			return
-		} else if remainImageCount < 0 || lastGalleryInfo.LastChapter > galleryInfo.LastChapter {
-			fmt.Println("下载记录有误！")
-			return
-		} else {
-			fmt.Println("剩余图片数量:", remainImageCount)
-			beginIndex = downloadedImageCount
-		}
+		imagePath, err := filepath.Abs(safeTitle)
+		beginIndex = utils.GetBeginIndex(imagePath, []string{".jpg", ".png"})
 	} else {
 		//生成缓存文件
 		err := utils.BuildCache(safeTitle, infoJsonPath, galleryInfo)
@@ -228,22 +221,25 @@ func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
 	}
 	fmt.Println("beginIndex=", beginIndex)
 	imagePageInfoMap := GetAllImagePageInfo(menuDoc)
-	sortedImageInfoMap := utils.SortMapsByIntKey(imagePageInfoMap, true)[beginIndex:]
+	sortedImagePageInfoMap := utils.SortMapsByIntKey(imagePageInfoMap, true)[beginIndex:]
 
 	//按batchSize分组获取url并保存图片
-	for batchIndex := 0; batchIndex < len(sortedImageInfoMap); batchIndex += batchSize {
-		subImageInfoMap := sortedImageInfoMap[batchIndex:utils.MinInt(batchIndex+batchSize, len(sortedImageInfoMap))]
-		tasks := make(chan map[int]string, len(subImageInfoMap))
-		imageInfoChannel := make(chan map[string]string, len(subImageInfoMap))
+	for batchIndex := 0; batchIndex < len(sortedImagePageInfoMap); batchIndex += batchSize {
+		subImagePageInfoMap := sortedImagePageInfoMap[batchIndex:utils.MinInt(batchIndex+batchSize, len(sortedImagePageInfoMap))]
+		imagePageInfoMapChannel := make(chan map[int]string, len(subImagePageInfoMap))
+		//一个图片页中最多有maxImageInOnePage张图片
+		imageInfoChannelSize := maxImageInOnePage * len(subImagePageInfoMap)
+		imageInfoChannel := make(chan map[string]string, imageInfoChannelSize)
 		var imageInfoMap []map[string]string
 
-		for _, info := range subImageInfoMap {
-			tasks <- info
+		for _, info := range subImagePageInfoMap {
+			imagePageInfoMapChannel <- info
 		}
-		close(tasks)
+		close(imagePageInfoMapChannel)
 
-		syncParsePage(tasks, imageInfoChannel, cookiesParam, numWorkers)
-		for i := 0; i < len(subImageInfoMap); i++ {
+		sumImage := syncParsePage(imagePageInfoMapChannel, imageInfoChannel, cookiesParam, numWorkers)
+		//在这个channel里只有sumImage个元素，所以只需要循环sumImage次
+		for i := 0; i < sumImage; i++ {
 			imageInfo := <-imageInfoChannel
 			imageInfoMap = append(imageInfoMap, imageInfo)
 		}

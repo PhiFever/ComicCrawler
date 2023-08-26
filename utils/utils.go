@@ -10,8 +10,13 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
+)
+
+const (
+	DelayMs = 330
 )
 
 func ErrorCheck(err error) {
@@ -187,6 +192,44 @@ func GetFileTotal(dirPath string, fileSuffixes []string) int {
 	return count
 }
 
+// GetBeginIndex 用于获取指定目录下指定格式和后缀的文件中最大的序号，用于计算剩余图片数（目前只支持`序号1_序号2.后缀`的格式）
+func GetBeginIndex(dirPath string, fileSuffixes []string) int {
+	files, err := os.ReadDir(dirPath)
+	if err != nil {
+		fmt.Println("Error reading directory:", err)
+		return -1
+	}
+
+	maxIndex := -1
+
+	for _, file := range files {
+		if file.IsDir() {
+			continue
+		}
+
+		for _, suffix := range fileSuffixes {
+			if strings.HasSuffix(file.Name(), suffix) {
+				name := strings.TrimSuffix(file.Name(), suffix)
+				parts := strings.Split(name, "_")
+				if len(parts) != 2 {
+					continue
+				}
+
+				index, err := strconv.Atoi(parts[0])
+				if err != nil {
+					continue
+				}
+
+				if index > maxIndex {
+					maxIndex = index
+				}
+			}
+		}
+	}
+
+	return maxIndex
+}
+
 // ReadListFile 用于按行读取列表文件，返回一个字符串切片
 func ReadListFile(filePath string) ([]string, error) {
 	var list []string
@@ -229,6 +272,8 @@ func SaveImages(baseCollector *colly.Collector, imageInfoMap []map[string]string
 		ErrorCheck(err)
 		err = baseCollector.Request("GET", imageUrl, nil, nil, nil)
 		ErrorCheck(err)
+		//增加延时，防止被ban
+		time.Sleep(time.Millisecond * time.Duration(DelayMs))
 		err = SaveFile(filePath, imageContent)
 		if err != nil {
 			fmt.Println("Error saving image:", err)
