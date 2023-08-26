@@ -197,7 +197,7 @@ func GetBeginIndex(dirPath string, fileSuffixes []string) int {
 	files, err := os.ReadDir(dirPath)
 	if err != nil {
 		fmt.Println("Error reading directory:", err)
-		return -1
+		return 0
 	}
 
 	maxIndex := 0

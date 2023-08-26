@@ -69,7 +69,7 @@ func Test_getGalleryInfo(t *testing.T) {
 	}
 }
 
-func Test_getAllImagePageUrl(t *testing.T) {
+func Test_getAllImagePageInfo(t *testing.T) {
 	type args struct {
 		doc *goquery.Document
 	}
@@ -85,16 +85,16 @@ func Test_getAllImagePageUrl(t *testing.T) {
 			},
 			want: []map[int]string{
 				{
-					149: "https://manhua.dmzj.com/chengweiduoxinmodebiyao/139899.shtml#1",
+					1: "https://manhua.dmzj.com/chengweiduoxinmodebiyao/102006.shtml#1",
 				},
 				{
-					148: "https://manhua.dmzj.com/chengweiduoxinmodebiyao/139388.shtml#1",
+					2: "https://manhua.dmzj.com/chengweiduoxinmodebiyao/102022.shtml#1",
 				},
 				{
-					147: "https://manhua.dmzj.com/chengweiduoxinmodebiyao/138862.shtml#1",
+					3: "https://manhua.dmzj.com/chengweiduoxinmodebiyao/103711.shtml#1",
 				},
 				{
-					146: "https://manhua.dmzj.com/chengweiduoxinmodebiyao/138033.shtml#1",
+					4: "https://manhua.dmzj.com/chengweiduoxinmodebiyao/103712.shtml#1",
 				},
 			},
 		},
@@ -109,44 +109,61 @@ func Test_getAllImagePageUrl(t *testing.T) {
 	}
 }
 
-func TestGetAllOtherImagePageInfo(t *testing.T) {
+func Test_getAllOtherImagePageInfo(t *testing.T) {
 	type args struct {
 		doc *goquery.Document
 	}
 	tests := []struct {
-		name string
-		args args
-		want []map[string]string
+		name                       string
+		args                       args
+		wantImageOtherPageInfoList []map[int]string
+		wantIndexToNameMap         []map[int]string
 	}{
 		{
 			name: "无其他页",
 			args: args{
 				doc: client.GetHtmlDoc(cookiesParam, "https://manhua.dmzj.com/xianxiashouweiqiang/"),
 			},
-			want: []map[string]string{},
+			wantImageOtherPageInfoList: []map[int]string{},
+			wantIndexToNameMap:         []map[int]string{},
 		},
 		{
 			name: "有其他页",
 			args: args{
 				doc: client.GetHtmlDoc(cookiesParam, "https://manhua.dmzj.com/rangwoxinshendangyangdehuainvren/"),
 			},
-			want: []map[string]string{
-				{"短篇06": "https://manhua.dmzj.com/rangwoxinshendangyangdehuainvren/119129.shtml#1"},
-				{"短篇05": "https://manhua.dmzj.com/rangwoxinshendangyangdehuainvren/119128.shtml#1"},
-				{"短篇04": "https://manhua.dmzj.com/rangwoxinshendangyangdehuainvren/118781.shtml#1"},
-				{"短篇03": "https://manhua.dmzj.com/rangwoxinshendangyangdehuainvren/118559.shtml#1"},
-				{"短篇02": "https://manhua.dmzj.com/rangwoxinshendangyangdehuainvren/118154.shtml#1"},
-				{"短篇01": "https://manhua.dmzj.com/rangwoxinshendangyangdehuainvren/118153.shtml#1"},
+			wantImageOtherPageInfoList: []map[int]string{
+				{1: "https://manhua.dmzj.com/rangwoxinshendangyangdehuainvren/118153.shtml#1"},
+				{2: "https://manhua.dmzj.com/rangwoxinshendangyangdehuainvren/118154.shtml#1"},
+				{3: "https://manhua.dmzj.com/rangwoxinshendangyangdehuainvren/118559.shtml#1"},
+				{4: "https://manhua.dmzj.com/rangwoxinshendangyangdehuainvren/118781.shtml#1"},
+				{5: "https://manhua.dmzj.com/rangwoxinshendangyangdehuainvren/119128.shtml#1"},
+				{6: "https://manhua.dmzj.com/rangwoxinshendangyangdehuainvren/119129.shtml#1"},
+			},
+			wantIndexToNameMap: []map[int]string{
+				{1: "短篇01"},
+				{2: "短篇02"},
+				{3: "短篇03"},
+				{4: "短篇04"},
+				{5: "短篇05"},
+				{6: "短篇06"},
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := getAllOtherImagePageInfo(tt.args.doc)
-			if !reflect.DeepEqual(got, tt.want) {
-				for i, j := range got {
-					if !reflect.DeepEqual(j, tt.want[i]) {
-						t.Errorf("getAllOtherImagePageInfo() = %v, want %v", j, tt.want[i])
+			gotImageOtherPageInfoList, gotIndexToNameMap := getAllOtherImagePageInfo(tt.args.doc)
+			if !reflect.DeepEqual(gotImageOtherPageInfoList, tt.wantImageOtherPageInfoList) {
+				for i, j := range gotImageOtherPageInfoList {
+					if !reflect.DeepEqual(j, tt.wantImageOtherPageInfoList[i]) {
+						t.Errorf("gotImageOtherPageInfoList = %v, want %v", j, tt.wantImageOtherPageInfoList[i])
+					}
+				}
+			}
+			if !reflect.DeepEqual(gotIndexToNameMap, tt.wantIndexToNameMap) {
+				for i, j := range gotIndexToNameMap {
+					if !reflect.DeepEqual(j, tt.wantIndexToNameMap[i]) {
+						t.Errorf("gotIndexToNameMap = %v, want %v", j, tt.wantIndexToNameMap[i])
 					}
 				}
 			}
