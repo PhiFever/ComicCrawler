@@ -27,7 +27,7 @@ type GalleryInfo struct {
 	TagList    map[string][]string `json:"tag_list"`
 }
 
-func GetGalleryInfo(galleryUrl string) GalleryInfo {
+func getGalleryInfo(galleryUrl string) GalleryInfo {
 	c := colly.NewCollector(
 		//模拟浏览器
 		colly.UserAgent(`Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36 Edg/115.0.1901.203`),
@@ -79,7 +79,7 @@ func GetGalleryInfo(galleryUrl string) GalleryInfo {
 	return galleryInfo
 }
 
-func GenerateIndexURL(urlStr string, page int) string {
+func generateIndexURL(urlStr string, page int) string {
 	u, err := url.Parse(urlStr)
 	if err != nil {
 		fmt.Println("Error parsing URL:", err)
@@ -97,8 +97,8 @@ func GenerateIndexURL(urlStr string, page int) string {
 	return u.String()
 }
 
-// GetAllImagePageUrl 获取图片页面的url
-func GetAllImagePageUrl(c *colly.Collector, indexUrl string) []string {
+// getAllImagePageUrl 获取图片页面的url
+func getAllImagePageUrl(c *colly.Collector, indexUrl string) []string {
 	var imagePageUrls []string
 	c.OnHTML("div[id='gdt']", func(e *colly.HTMLElement) {
 		//找到其下所有<div class="gdtm">标签
@@ -116,7 +116,7 @@ func GetAllImagePageUrl(c *colly.Collector, indexUrl string) []string {
 	return imagePageUrls
 }
 
-func GetImageUrl(c *colly.Collector, imagePageUrl string) string {
+func getImageUrl(c *colly.Collector, imagePageUrl string) string {
 	//id="img"的src属性
 	var imageUrl string
 	c.OnHTML("img[id='img']", func(e *colly.HTMLElement) {
@@ -130,7 +130,7 @@ func GetImageUrl(c *colly.Collector, imagePageUrl string) string {
 	return imageUrl
 }
 
-func BuildJpegRequestHeaders() http.Header {
+func buildJpegRequestHeaders() http.Header {
 	headers := http.Header{
 		"Accept":             {"image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8"},
 		"Accept-Encoding":    {"gzip, deflate, br"},
@@ -155,9 +155,9 @@ func BuildJpegRequestHeaders() http.Header {
 	return headers
 }
 
-func GetImageInfoFromPage(c *colly.Collector, imagePageUrl string) (string, string) {
+func getImageInfoFromPage(c *colly.Collector, imagePageUrl string) (string, string) {
 	imageIndex := imagePageUrl[strings.LastIndex(imagePageUrl, "-")+1:]
-	imageUrl := GetImageUrl(c, imagePageUrl)
+	imageUrl := getImageUrl(c, imagePageUrl)
 	imageSuffix := imageUrl[strings.LastIndex(imageUrl, "."):]
 	imageName := fmt.Sprintf("%s%s", imageIndex, imageSuffix)
 	return imageName, imageUrl
@@ -170,7 +170,7 @@ func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
 	remainder := 0
 
 	//获取画廊信息
-	galleryInfo := GetGalleryInfo(galleryUrl)
+	galleryInfo := getGalleryInfo(galleryUrl)
 	fmt.Println("Total Image:", galleryInfo.TotalImage)
 	safeTitle := utils.ToSafeFilename(galleryInfo.Title)
 	fmt.Println(safeTitle)
@@ -203,31 +203,26 @@ func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
 		}
 	}
 
-	//创建map{'imageName':imageName,'imageUrl':imageUrl}
-	var imageInfoMap []map[string]string
-
 	//重新初始化Collector
-	collector := client.InitCollector(BuildJpegRequestHeaders())
+	collector := client.InitCollector(buildJpegRequestHeaders())
 
 	sumPage := int(math.Ceil(float64(galleryInfo.TotalImage) / float64(imageInOnepage)))
 	for i := beginIndex; i < sumPage; i++ {
 		fmt.Println("\nCurrent index:", i)
-		indexUrl := GenerateIndexURL(galleryUrl, i)
+		indexUrl := generateIndexURL(galleryUrl, i)
 		fmt.Println(indexUrl)
 		var imagePageUrls []string
+		imagePageUrls = getAllImagePageUrl(collector, indexUrl)
 		if i == beginIndex {
-			imagePageUrls = GetAllImagePageUrl(collector, indexUrl)[remainder:]
-		} else {
-			imagePageUrls = GetAllImagePageUrl(collector, indexUrl)
+			//如果是第一次处理目录，需要去掉前面的余数
+			imagePageUrls = imagePageUrls[remainder:]
 		}
 
-		//清空imageDataList中的数据
-		imageInfoMap = []map[string]string{}
-
+		var imageInfoList []map[string]string
 		//根据imagePageUrls获取imageDataList
 		for _, imagePageUrl := range imagePageUrls {
-			imageName, imageUrl := GetImageInfoFromPage(collector, imagePageUrl)
-			imageInfoMap = append(imageInfoMap, map[string]string{
+			imageName, imageUrl := getImageInfoFromPage(collector, imagePageUrl)
+			imageInfoList = append(imageInfoList, map[string]string{
 				"imageName": imageName,
 				"imageUrl":  imageUrl,
 			})
@@ -238,7 +233,7 @@ func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
 		time.Sleep(time.Duration(sleepTime) * time.Second)
 
 		// 进行本次处理目录中所有图片的批量保存
-		err := utils.SaveImages(collector, imageInfoMap, safeTitle)
+		err := utils.SaveImages(collector, imageInfoList, safeTitle)
 		utils.ErrorCheck(err)
 
 		//防止被ban，每保存一篇目录中的所有图片就sleep 5-15 seconds

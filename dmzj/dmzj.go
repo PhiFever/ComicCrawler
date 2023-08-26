@@ -19,9 +19,9 @@ import (
 
 const (
 	cookiesPath       = `dmzj_cookies.json`
-	numWorkers        = 5  //并发量
+	numWorkers        = 5  //页面处理的并发量
 	batchSize         = 10 //每次下载的图片页面数量，建议为numWorkers的整数倍
-	maxImageInOnePage = 20 //单个图片页中最大图片数量
+	maxImageInOnePage = 40 //单个图片页中最大图片数量
 )
 
 type GalleryInfo struct {
@@ -32,8 +32,8 @@ type GalleryInfo struct {
 	TagList        map[string][]string `json:"tag_list"`
 }
 
-// GetGalleryInfo 从主目录页获取画廊信息
-func GetGalleryInfo(doc *goquery.Document, galleryUrl string) GalleryInfo {
+// getGalleryInfo 从主目录页获取画廊信息
+func getGalleryInfo(doc *goquery.Document, galleryUrl string) GalleryInfo {
 	var galleryInfo GalleryInfo
 	galleryInfo.TagList = make(map[string][]string)
 	galleryInfo.URL = galleryUrl
@@ -68,17 +68,17 @@ func GetGalleryInfo(doc *goquery.Document, galleryUrl string) GalleryInfo {
 	return galleryInfo
 }
 
-// GetAllImagePageInfo 从主目录页获取所有图片页地址，返回一个切片，元素为map[int]string，key为图片页序号，value为图片页地址
-func GetAllImagePageInfo(doc *goquery.Document) []map[int]string {
-	var imagePageInfoMap []map[int]string
+// getAllImagePageInfo 从主目录页获取所有图片页地址，返回一个切片，元素为map[int]string，key为图片页序号，value为图片页地址
+func getAllImagePageInfo(doc *goquery.Document) []map[int]string {
+	var imagePageInfoList []map[int]string
 	// 找到<div class="cartoon_online_border">
 	doc.Find("div.cartoon_online_border").Each(func(i int, s *goquery.Selection) {
 		s.Find("a").Each(func(j int, a *goquery.Selection) {
 			href, exists := a.Attr("href")
 			if exists {
 				imageName := strings.TrimSpace(a.Text())
-
-				indexStr, err := utils.ExtractSubstringFromText(`第(\d+)话`, imageName)
+				//从图片页名字中提取图片页序号
+				indexStr, err := utils.ExtractSubstringFromText(`(\d+)`, imageName)
 				utils.ErrorCheck(err)
 				//cast库在转换时字符串若是以 "0" 开头，"07" 转换后得到整型 7，而 "08" 转换后得到整型 0
 				//https://iokde.com/post/golang-cast64-snare.html
@@ -87,16 +87,36 @@ func GetAllImagePageInfo(doc *goquery.Document) []map[int]string {
 				imageInfo := map[int]string{
 					imageIndex: "https://manhua.dmzj.com" + href,
 				}
-				imagePageInfoMap = append(imagePageInfoMap, imageInfo)
+				imagePageInfoList = append(imagePageInfoList, imageInfo)
 			}
 		})
 	})
 
-	return imagePageInfoMap
+	return imagePageInfoList
 }
 
-// GetImageUrlFromPage 从单个图片页获取图片地址
-func GetImageUrlFromPage(doc *goquery.Document) []string {
+// getAllOtherImagePageInfo 从主目录页获取所有`其他系列`图片页地址，返回一个切片，元素为map[string]string，key为图片页名字，value为图片页地址
+func getAllOtherImagePageInfo(doc *goquery.Document) []map[string]string {
+	var imageOtherPageInfoList []map[string]string
+
+	// 找到<div class="cartoon_online_border">
+	doc.Find("div.cartoon_online_border_other").Each(func(i int, s *goquery.Selection) {
+		s.Find("a").Each(func(j int, a *goquery.Selection) {
+			href, exists := a.Attr("href")
+			if exists {
+				imageName := strings.TrimSpace(a.Text())
+				imageInfo := map[string]string{
+					imageName: "https://manhua.dmzj.com" + href,
+				}
+				imageOtherPageInfoList = append(imageOtherPageInfoList, imageInfo)
+			}
+		})
+	})
+	return imageOtherPageInfoList
+}
+
+// getImageUrlFromPage 从单个图片页获取图片地址
+func getImageUrlFromPage(doc *goquery.Document) []string {
 	var imageUrl []string
 	//找到<div class="scrollbar-demo-item"
 	doc.Find("div.scrollbar-demo-item").Each(func(i int, s *goquery.Selection) {
@@ -110,7 +130,7 @@ func GetImageUrlFromPage(doc *goquery.Document) []string {
 	return imageUrl
 }
 
-// 并发sync.WaitGroup解析页面，获取图片地址，并发量为numWorkers，返回实际获取的图片地址数量(int)
+// syncParsePage 并发sync.WaitGroup解析页面，获取图片地址，并发量为numWorkers，返回实际获取的图片地址数量(int)
 func syncParsePage(ImageInfoMapChannel <-chan map[int]string, imageInfoChannel chan<- map[string]string,
 	cookiesParam []*network.CookieParam, numWorkers int) int {
 	sumImage := 0
@@ -126,7 +146,7 @@ func syncParsePage(ImageInfoMapChannel <-chan map[int]string, imageInfoChannel c
 					//fmt.Println(index, url)
 					pageDoc := client.GetHtmlDoc(cookiesParam, url)
 					//获取图片地址
-					imageUrlLists := GetImageUrlFromPage(pageDoc)
+					imageUrlLists := getImageUrlFromPage(pageDoc)
 					for i, imageUrl := range imageUrlLists {
 						imageSuffix := imageUrl[strings.LastIndex(imageUrl, "."):]
 						imageInfo := map[string]string{
@@ -146,7 +166,7 @@ func syncParsePage(ImageInfoMapChannel <-chan map[int]string, imageInfoChannel c
 	return sumImage
 }
 
-func BuildJpegRequestHeaders() http.Header {
+func buildJpegRequestHeaders() http.Header {
 	headers := http.Header{
 		"authority": []string{"images.idmzj.com"},
 		"method":    []string{"GET"},
@@ -189,7 +209,7 @@ func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
 	menuDoc := client.GetHtmlDoc(cookiesParam, galleryUrl)
 
 	//获取画廊信息
-	galleryInfo := GetGalleryInfo(menuDoc, galleryUrl)
+	galleryInfo := getGalleryInfo(menuDoc, galleryUrl)
 	safeTitle := utils.ToSafeFilename(galleryInfo.Title)
 	fmt.Println(safeTitle)
 
@@ -220,32 +240,37 @@ func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
 		}
 	}
 	fmt.Println("beginIndex=", beginIndex)
-	imagePageInfoMap := GetAllImagePageInfo(menuDoc)
-	sortedImagePageInfoMap := utils.SortMapsByIntKey(imagePageInfoMap, true)[beginIndex:]
+	imagePageInfoList := getAllImagePageInfo(menuDoc)
+	//OtherImagePageInfoList := getAllOtherImagePageInfo(menuDoc)
+	sortedImagePageInfoList := utils.SortListByMapsIntKey(imagePageInfoList, true)[beginIndex:]
+	//sortedOtherImagePageInfoList := utils.SortListByMapsIntKey(OtherImagePageInfoList, true)[beginIndex:]
 
+	//TODO:提个函数出来
 	//按batchSize分组获取url并保存图片
-	for batchIndex := 0; batchIndex < len(sortedImagePageInfoMap); batchIndex += batchSize {
-		subImagePageInfoMap := sortedImagePageInfoMap[batchIndex:utils.MinInt(batchIndex+batchSize, len(sortedImagePageInfoMap))]
-		imagePageInfoMapChannel := make(chan map[int]string, len(subImagePageInfoMap))
-		//一个图片页中最多有maxImageInOnePage张图片
-		imageInfoChannelSize := maxImageInOnePage * len(subImagePageInfoMap)
+	for batchIndex := 0; batchIndex < len(sortedImagePageInfoList); batchIndex += batchSize {
+		//每次循环都重新初始化channel和切片
+		subImagePageInfoList := sortedImagePageInfoList[batchIndex:utils.MinInt(batchIndex+batchSize, len(sortedImagePageInfoList))]
+		imagePageInfoListChannel := make(chan map[int]string, len(subImagePageInfoList))
+		//每个图片页中最多有maxImageInOnePage张图片
+		imageInfoChannelSize := maxImageInOnePage * len(subImagePageInfoList)
 		imageInfoChannel := make(chan map[string]string, imageInfoChannelSize)
-		var imageInfoMap []map[string]string
+		var imageInfoList []map[string]string
 
-		for _, info := range subImagePageInfoMap {
-			imagePageInfoMapChannel <- info
+		for _, info := range subImagePageInfoList {
+			imagePageInfoListChannel <- info
 		}
-		close(imagePageInfoMapChannel)
+		close(imagePageInfoListChannel)
 
-		sumImage := syncParsePage(imagePageInfoMapChannel, imageInfoChannel, cookiesParam, numWorkers)
+		sumImage := syncParsePage(imagePageInfoListChannel, imageInfoChannel, cookiesParam, numWorkers)
+		close(imageInfoChannel)
 		//在这个channel里只有sumImage个元素，所以只需要循环sumImage次
 		for i := 0; i < sumImage; i++ {
 			imageInfo := <-imageInfoChannel
-			imageInfoMap = append(imageInfoMap, imageInfo)
+			imageInfoList = append(imageInfoList, imageInfo)
 		}
 		// 进行本次处理目录中所有图片的批量保存
-		baseCollector := client.InitCollector(BuildJpegRequestHeaders())
-		err = utils.SaveImages(baseCollector, imageInfoMap, safeTitle)
+		baseCollector := client.InitCollector(buildJpegRequestHeaders())
+		err = utils.SaveImages(baseCollector, imageInfoList, safeTitle)
 		utils.ErrorCheck(err)
 
 		//防止被ban，每保存一组图片就sleep 5-15 seconds

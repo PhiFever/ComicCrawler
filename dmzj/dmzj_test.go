@@ -16,7 +16,7 @@ var (
 	cookiesParam = client.ConvertCookies(cookies)
 )
 
-func TestGetGalleryInfo(t *testing.T) {
+func Test_getGalleryInfo(t *testing.T) {
 	tests := []struct {
 		name       string
 		galleryUrl string
@@ -45,7 +45,7 @@ func TestGetGalleryInfo(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			doc := client.GetHtmlDoc(cookiesParam, tt.galleryUrl)
-			if got := GetGalleryInfo(doc, tt.galleryUrl); !reflect.DeepEqual(got, tt.want) {
+			if got := getGalleryInfo(doc, tt.galleryUrl); !reflect.DeepEqual(got, tt.want) {
 				if got.Title != tt.want.Title {
 					t.Errorf("title got: %v, want: %v", got.Title, tt.want.Title)
 				}
@@ -69,7 +69,7 @@ func TestGetGalleryInfo(t *testing.T) {
 	}
 }
 
-func TestGetAllImagePageUrl(t *testing.T) {
+func Test_getAllImagePageUrl(t *testing.T) {
 	type args struct {
 		doc *goquery.Document
 	}
@@ -101,15 +101,60 @@ func TestGetAllImagePageUrl(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := GetAllImagePageInfo(tt.args.doc)[0:4]
+			got := getAllImagePageInfo(tt.args.doc)[0:4]
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("GetAllImagePageInfo() = %v, want %v", got, tt.want)
+				t.Errorf("getAllImagePageInfo() = %v, want %v", got, tt.want)
 			}
 		})
 	}
 }
 
-func TestGetImageUrlFromPage(t *testing.T) {
+func TestGetAllOtherImagePageInfo(t *testing.T) {
+	type args struct {
+		doc *goquery.Document
+	}
+	tests := []struct {
+		name string
+		args args
+		want []map[string]string
+	}{
+		{
+			name: "无其他页",
+			args: args{
+				doc: client.GetHtmlDoc(cookiesParam, "https://manhua.dmzj.com/xianxiashouweiqiang/"),
+			},
+			want: []map[string]string{},
+		},
+		{
+			name: "有其他页",
+			args: args{
+				doc: client.GetHtmlDoc(cookiesParam, "https://manhua.dmzj.com/rangwoxinshendangyangdehuainvren/"),
+			},
+			want: []map[string]string{
+				{"短篇06": "https://manhua.dmzj.com/rangwoxinshendangyangdehuainvren/119129.shtml#1"},
+				{"短篇05": "https://manhua.dmzj.com/rangwoxinshendangyangdehuainvren/119128.shtml#1"},
+				{"短篇04": "https://manhua.dmzj.com/rangwoxinshendangyangdehuainvren/118781.shtml#1"},
+				{"短篇03": "https://manhua.dmzj.com/rangwoxinshendangyangdehuainvren/118559.shtml#1"},
+				{"短篇02": "https://manhua.dmzj.com/rangwoxinshendangyangdehuainvren/118154.shtml#1"},
+				{"短篇01": "https://manhua.dmzj.com/rangwoxinshendangyangdehuainvren/118153.shtml#1"},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := getAllOtherImagePageInfo(tt.args.doc)
+			if !reflect.DeepEqual(got, tt.want) {
+				for i, j := range got {
+					if !reflect.DeepEqual(j, tt.want[i]) {
+						t.Errorf("getAllOtherImagePageInfo() = %v, want %v", j, tt.want[i])
+					}
+				}
+			}
+		})
+	}
+}
+
+func Test_getImageUrlFromPage(t *testing.T) {
 	type args struct {
 		doc *goquery.Document
 	}
@@ -134,11 +179,11 @@ func TestGetImageUrlFromPage(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := GetImageUrlFromPage(tt.args.doc)
+			got := getImageUrlFromPage(tt.args.doc)
 			if !reflect.DeepEqual(got, tt.want) {
 				for i, j := range got {
 					if j != tt.want[i] {
-						t.Errorf("GetImageUrlFromPage() = %v, want %v", j, tt.want[i])
+						t.Errorf("getImageUrlFromPage() = %v, want %v", j, tt.want[i])
 					}
 				}
 			}

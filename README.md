@@ -3,6 +3,7 @@
 
 ## TODO
 1. dmzj目录带分页的情况无法处理
+2. dmzj目录的`其他系列`尚未处理
 ## 缓存文件格式
 
 `galleryInfo.json`

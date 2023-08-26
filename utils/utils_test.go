@@ -85,7 +85,7 @@ func TestSaveFile(t *testing.T) {
 	}
 }
 
-func TestRandFloat(t *testing.T) {
+func TestTrueRandFloat(t *testing.T) {
 	type args struct {
 		min float64
 		max float64
@@ -288,8 +288,8 @@ func TestSortMapsByIntKey(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := SortMapsByIntKey(inputMap, tt.args.ascending); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("SortMapsByIntKey() = %v, want %v", got, tt.want)
+			if got := SortListByMapsIntKey(inputMap, tt.args.ascending); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("SortListByMapsIntKey() = %v, want %v", got, tt.want)
 			}
 		})
 	}

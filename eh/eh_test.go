@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestGetGalleryInfo(t *testing.T) {
+func Test_getGalleryInfo(t *testing.T) {
 	testCases := []struct {
 		url                 string
 		expectedGalleryInfo GalleryInfo
@@ -26,13 +26,13 @@ func TestGetGalleryInfo(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.url, func(t *testing.T) {
-			galleryInfo := GetGalleryInfo(tc.url)
+			galleryInfo := getGalleryInfo(tc.url)
 			assert.Equal(t, tc.expectedGalleryInfo, galleryInfo)
 		})
 	}
 }
 
-func TestGenerateIndexURL(t *testing.T) {
+func Test_generateIndexURL(t *testing.T) {
 	url := "https://xxx/yyy"
 	testCases := []struct {
 		page     int
@@ -50,7 +50,7 @@ func TestGenerateIndexURL(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("page=%d", tc.page), func(t *testing.T) {
-			result := GenerateIndexURL(url, tc.page)
+			result := generateIndexURL(url, tc.page)
 			assert.Equal(t, tc.expected, result)
 		})
 	}

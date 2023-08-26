@@ -50,8 +50,8 @@ func MinInt(x, y int) int {
 	return y
 }
 
-// SortMapsByIntKey 用于按照map中的int键值对进行排序
-func SortMapsByIntKey(maps []map[int]string, ascending bool) []map[int]string {
+// SortListByMapsIntKey 用于按照map中的int键值对进行排序
+func SortListByMapsIntKey(maps []map[int]string, ascending bool) []map[int]string {
 	getKey := func(m map[int]string) int {
 		for key := range m {
 			return key
@@ -200,7 +200,7 @@ func GetBeginIndex(dirPath string, fileSuffixes []string) int {
 		return -1
 	}
 
-	maxIndex := -1
+	maxIndex := 0
 
 	for _, file := range files {
 		if file.IsDir() {
@@ -253,8 +253,8 @@ func ReadListFile(filePath string) ([]string, error) {
 	return list, nil
 }
 
-// SaveImages 保存imageDataList中的所有图片，imageInfoMap中的每个元素都是一个map，包含两个键值对，imageName和imageUrl
-func SaveImages(baseCollector *colly.Collector, imageInfoMap []map[string]string, saveDir string) error {
+// SaveImages 保存imageInfoList中的所有图片，imageInfoMap中的每个元素都是一个map，包含两个键值对，imageName和imageUrl
+func SaveImages(baseCollector *colly.Collector, imageInfoList []map[string]string, saveDir string) error {
 	dir, err := filepath.Abs(saveDir)
 	err = os.MkdirAll(dir, os.ModePerm)
 	ErrorCheck(err)
@@ -265,7 +265,7 @@ func SaveImages(baseCollector *colly.Collector, imageInfoMap []map[string]string
 		imageContent = r.Body
 	})
 
-	for _, data := range imageInfoMap {
+	for _, data := range imageInfoList {
 		imageName := data["imageName"]
 		imageUrl := data["imageUrl"]
 		filePath, err := filepath.Abs(filepath.Join(dir, imageName))
