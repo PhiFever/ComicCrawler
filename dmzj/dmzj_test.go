@@ -69,45 +69,46 @@ func Test_getGalleryInfo(t *testing.T) {
 	}
 }
 
-func Test_getAllImagePageInfo(t *testing.T) {
-	type args struct {
-		doc *goquery.Document
-	}
-	tests := []struct {
-		name string
-		args args
-		want []map[int]string
-	}{
-		{
-			name: "成为夺心魔的必要",
-			args: args{
-				doc: client.GetHtmlDoc(cookiesParam, "https://manhua.dmzj.com/chengweiduoxinmodebiyao/"),
-			},
-			want: []map[int]string{
-				{
-					1: "https://manhua.dmzj.com/chengweiduoxinmodebiyao/102006.shtml#1",
-				},
-				{
-					2: "https://manhua.dmzj.com/chengweiduoxinmodebiyao/102022.shtml#1",
-				},
-				{
-					3: "https://manhua.dmzj.com/chengweiduoxinmodebiyao/103711.shtml#1",
-				},
-				{
-					4: "https://manhua.dmzj.com/chengweiduoxinmodebiyao/103712.shtml#1",
-				},
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := getAllImagePageInfo(tt.args.doc)[0:4]
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("getAllImagePageInfo() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
+//已经弃用的函数的测试函数
+//func Test_getAllImagePageInfo(t *testing.T) {
+//	type args struct {
+//		doc *goquery.Document
+//	}
+//	tests := []struct {
+//		name string
+//		args args
+//		want []map[int]string
+//	}{
+//		{
+//			name: "成为夺心魔的必要",
+//			args: args{
+//				doc: client.GetHtmlDoc(cookiesParam, "https://manhua.dmzj.com/chengweiduoxinmodebiyao/"),
+//			},
+//			want: []map[int]string{
+//				{
+//					1: "https://manhua.dmzj.com/chengweiduoxinmodebiyao/102006.shtml#1",
+//				},
+//				{
+//					2: "https://manhua.dmzj.com/chengweiduoxinmodebiyao/102022.shtml#1",
+//				},
+//				{
+//					3: "https://manhua.dmzj.com/chengweiduoxinmodebiyao/103711.shtml#1",
+//				},
+//				{
+//					4: "https://manhua.dmzj.com/chengweiduoxinmodebiyao/103712.shtml#1",
+//				},
+//			},
+//		},
+//	}
+//	for _, tt := range tests {
+//		t.Run(tt.name, func(t *testing.T) {
+//			got := getAllImagePageInfo(tt.args.doc)[0:4]
+//			if !reflect.DeepEqual(got, tt.want) {
+//				t.Errorf("getAllImagePageInfo() = %v, want %v", got, tt.want)
+//			}
+//		})
+//	}
+//}
 
 func Test_getAllOtherImagePageInfo(t *testing.T) {
 	type args struct {
@@ -152,7 +153,7 @@ func Test_getAllOtherImagePageInfo(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotImageOtherPageInfoList, gotIndexToNameMap := getAllOtherImagePageInfo(tt.args.doc)
+			gotImageOtherPageInfoList, gotIndexToNameMap := getAllImagePageInfoBySelector("div.cartoon_online_border_other", tt.args.doc)
 			if !reflect.DeepEqual(gotImageOtherPageInfoList, tt.wantImageOtherPageInfoList) {
 				for i, j := range gotImageOtherPageInfoList {
 					if !reflect.DeepEqual(j, tt.wantImageOtherPageInfoList[i]) {
@@ -314,6 +315,50 @@ func Test_getBeginIndex(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := utils.GetBeginIndex(tt.args.dirPath, tt.args.fileSuffixes); got != tt.want {
 				t.Errorf("getBeginIndex() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_checkUpdate(t *testing.T) {
+	type args struct {
+		lastUpdateTime string
+		newTime        string
+	}
+	tests := []struct {
+		name string
+		args args
+		want bool
+	}{
+		{
+			name: "更新",
+			args: args{
+				lastUpdateTime: "2021-08-25",
+				newTime:        "2023-08-25",
+			},
+			want: true,
+		},
+		{
+			name: "不更新",
+			args: args{
+				lastUpdateTime: "2023-08-25",
+				newTime:        "2023-08-25",
+			},
+			want: false,
+		},
+		{
+			name: "异常",
+			args: args{
+				lastUpdateTime: "2023-08-25",
+				newTime:        "2021-08-25",
+			},
+			want: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := checkUpdate(tt.args.lastUpdateTime, tt.args.newTime); got != tt.want {
+				t.Errorf("checkUpdate() = %v, want %v", got, tt.want)
 			}
 		})
 	}

@@ -192,7 +192,7 @@ func GetFileTotal(dirPath string, fileSuffixes []string) int {
 	return count
 }
 
-// GetBeginIndex 用于获取指定目录下指定格式和后缀的文件中最大的序号，用于计算剩余图片数（目前只支持`序号1_序号2.后缀`的格式）
+// GetBeginIndex 用于获取指定目录下指定格式和后缀的文件中最大的序号，用于计算剩余图片数（目前只支持`数字_数字.后缀`的格式）
 func GetBeginIndex(dirPath string, fileSuffixes []string) int {
 	files, err := os.ReadDir(dirPath)
 	if err != nil {

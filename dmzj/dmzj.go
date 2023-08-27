@@ -12,7 +12,6 @@ import (
 	"net/http"
 	"path/filepath"
 	"regexp"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -20,9 +19,9 @@ import (
 
 const (
 	cookiesPath       = `dmzj_cookies.json`
-	numWorkers        = 5  //页面处理的并发量
-	batchSize         = 10 //每次下载的图片页面数量，建议为numWorkers的整数倍
-	maxImageInOnePage = 40 //单个图片页中最大图片数量
+	numWorkers        = 5   //页面处理的并发量
+	batchSize         = 10  //每次下载的图片页面数量，建议为numWorkers的整数倍
+	maxImageInOnePage = 100 //单个图片页中最大图片数量，用于初始化channel（感觉应该不会超过50，但是为了保险起见还是设置为100）
 	otherDir          = `其他系列`
 )
 
@@ -70,47 +69,72 @@ func getGalleryInfo(doc *goquery.Document, galleryUrl string) GalleryInfo {
 	return galleryInfo
 }
 
-// getAllImagePageInfo 从主目录页获取所有图片页地址，返回一个切片，元素为map[int]string，key为图片页序号，value为图片页地址
-func getAllImagePageInfo(doc *goquery.Document) []map[int]string {
-	imageInfoStack := stack.Stack{}
-	var imagePageInfoList []map[int]string
-	// 找到<div class="cartoon_online_border">
-	doc.Find("div.cartoon_online_border").Each(func(i int, s *goquery.Selection) {
-		s.Find("a").Each(func(j int, a *goquery.Selection) {
-			href, exists := a.Attr("href")
-			if exists {
-				imageName := strings.TrimSpace(a.Text())
-				//从图片页名字中提取图片页序号
-				indexStr, err := utils.ExtractSubstringFromText(`(\d+)`, imageName)
-				utils.ErrorCheck(err)
-				//cast库在转换时字符串若是以 "0" 开头，"07" 转换后得到整型 7，而 "08" 转换后得到整型 0
-				//https://iokde.com/post/golang-cast64-snare.html
-				imageIndex, _ := strconv.Atoi(indexStr)
-
-				imageInfo := map[int]string{
-					imageIndex: "https://manhua.dmzj.com" + href,
-				}
-				imageInfoStack.Push(imageInfo)
-			}
-		})
-	})
-	//直接处理得到的是逆序序列，通过栈转换为正序
-	for !imageInfoStack.IsEmpty() {
-		item := imageInfoStack.Pop()
-		imagePageInfoList = append(imagePageInfoList, item.(map[int]string))
+func checkUpdate(lastUpdateTime string, newTime string) bool {
+	layout := "2006-01-02" //时间格式模板
+	parsedDate1, err := time.Parse(layout, lastUpdateTime)
+	if err != nil {
+		fmt.Println("日期解析错误:", err)
+		return true
+	}
+	parsedDate2, err := time.Parse(layout, newTime)
+	if err != nil {
+		fmt.Println("日期解析错误:", err)
+		return true
 	}
 
-	return imagePageInfoList
+	if parsedDate1.Before(parsedDate2) {
+		return true
+	} else if parsedDate1.After(parsedDate2) {
+		fmt.Println("解析的日期晚于当前日期，galleryInfo.json文件异常")
+		return true
+	} else {
+		return false
+	}
 }
 
-// getAllOtherImagePageInfo 从主目录页获取所有`其他系列`图片页地址，返回2个切片，元素均为map[int]string
+//已经弃用的函数
+//// getAllImagePageInfo 从主目录页获取所有图片页地址，返回一个切片，元素为map[int]string，key为图片页序号，value为图片页地址
+//func getAllImagePageInfo(doc *goquery.Document) []map[int]string {
+//	imageInfoStack := stack.Stack{}
+//	var imagePageInfoList []map[int]string
+//	// 找到<div class="cartoon_online_border">
+//	doc.Find("div.cartoon_online_border").Each(func(i int, s *goquery.Selection) {
+//		s.Find("a").Each(func(j int, a *goquery.Selection) {
+//			href, exists := a.Attr("href")
+//			if exists {
+//				imageName := strings.TrimSpace(a.Text())
+//				//从图片页名字中提取图片页序号
+//				indexStr, err := utils.ExtractSubstringFromText(`(\d+)`, imageName)
+//				utils.ErrorCheck(err)
+//				//cast库在转换时字符串若是以 "0" 开头，"07" 转换后得到整型 7，而 "08" 转换后得到整型 0
+//				//https://iokde.com/post/golang-cast64-snare.html
+//				imageIndex, _ := strconv.Atoi(indexStr)
+//
+//				imageInfo := map[int]string{
+//					imageIndex: "https://manhua.dmzj.com" + href,
+//				}
+//				imageInfoStack.Push(imageInfo)
+//			}
+//		})
+//	})
+//	//直接处理得到的是逆序序列，通过栈转换为正序
+//	for !imageInfoStack.IsEmpty() {
+//		item := imageInfoStack.Pop()
+//		imagePageInfoList = append(imagePageInfoList, item.(map[int]string))
+//	}
+//
+//	return imagePageInfoList
+//}
+
+// getAllImagePageInfoBySelector 从主目录页获取所有`selector`图片页地址
+// selector的值为`div.cartoon_online_border`或`div.cartoon_online_border_other`，
+// 返回2个切片，元素均为map[int]string
 // imageOtherPageInfoList key为图片页序号，value为图片页地址
 // indexToNameMap key为图片页序号，value为图片页名字
-func getAllOtherImagePageInfo(doc *goquery.Document) (imageOtherPageInfoList []map[int]string, indexToNameMap []map[int]string) {
-	index := 1
+func getAllImagePageInfoBySelector(selector string, doc *goquery.Document) (imageOtherPageInfoList []map[int]string, indexToNameMap []map[int]string) {
 	imageInfoStack := stack.Stack{}
 	// 找到<div class="cartoon_online_border">
-	doc.Find("div.cartoon_online_border_other").Each(func(i int, s *goquery.Selection) {
+	doc.Find(selector).Each(func(i int, s *goquery.Selection) {
 		s.Find("a").Each(func(j int, a *goquery.Selection) {
 			href, exists := a.Attr("href")
 			if exists {
@@ -123,6 +147,7 @@ func getAllOtherImagePageInfo(doc *goquery.Document) (imageOtherPageInfoList []m
 		})
 	})
 
+	index := 1
 	//直接处理得到的是逆序序列，通过栈转换为正序
 	for !imageInfoStack.IsEmpty() {
 		item := imageInfoStack.Pop()
@@ -280,7 +305,7 @@ func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
 		err := utils.LoadCache(filepath.Join(safeTitle, infoJsonPath), &lastGalleryInfo)
 		utils.ErrorCheck(err)
 
-		needUpdate = lastGalleryInfo.LastChapter < galleryInfo.LastChapter
+		needUpdate = checkUpdate(lastGalleryInfo.LastUpdateTime, galleryInfo.LastUpdateTime)
 		if needUpdate {
 			fmt.Println("发现新章节，更新下载记录")
 			err := utils.BuildCache(safeTitle, infoJsonPath, galleryInfo)
@@ -307,15 +332,18 @@ func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
 	fmt.Println("mainBeginIndex=", mainBeginIndex)
 	fmt.Println("otherBeginIndex=", otherBeginIndex)
 
-	imagePageInfoList := getAllImagePageInfo(menuDoc)[mainBeginIndex:]
-	OtherImagePageInfoList, indexToNameMap := getAllOtherImagePageInfo(menuDoc)
-	OtherImagePageInfoList = OtherImagePageInfoList[otherBeginIndex:]
+	imagePageInfoList, indexToNameMap := getAllImagePageInfoBySelector("div.cartoon_online_border", menuDoc)
+	imagePageInfoList = imagePageInfoList[mainBeginIndex:]
+	otherImagePageInfoList, otherIndexToNameMap := getAllImagePageInfoBySelector("div.cartoon_online_border_other", menuDoc)
+	otherImagePageInfoList = otherImagePageInfoList[otherBeginIndex:]
 
+	err = utils.BuildCache(safeTitle, "menu.json", indexToNameMap)
+	utils.ErrorCheck(err)
 	otherPath := filepath.Join(safeTitle, otherDir)
-	if OtherImagePageInfoList != nil {
-		err = utils.BuildCache(otherPath, "menu.json", indexToNameMap)
+	if otherImagePageInfoList != nil {
+		err = utils.BuildCache(otherPath, "menu.json", otherIndexToNameMap)
 		utils.ErrorCheck(err)
 	}
 	batchDownloadImage(cookiesParam, imagePageInfoList, safeTitle)
-	batchDownloadImage(cookiesParam, OtherImagePageInfoList, otherPath)
+	batchDownloadImage(cookiesParam, otherImagePageInfoList, otherPath)
 }
