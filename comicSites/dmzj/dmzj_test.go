@@ -259,7 +259,7 @@ func Test_syncParsePage(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			go syncParsePage(tt.args.tasks, tt.args.imageInfoChannel, tt.args.cookiesParam, tt.args.numWorkers) // 启动并发执行
+			go utils.SyncParsePage(getImageUrlFromPage, tt.args.tasks, tt.args.imageInfoChannel, tt.args.cookiesParam, tt.args.numWorkers) // 启动并发执行
 			// 发送任务数据到tasks通道
 			tt.args.tasks <- tt.args.tasksData
 			// 接收所有发送到imageInfoChannel通道的数据

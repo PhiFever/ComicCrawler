@@ -1,7 +1,6 @@
 package client
 
 import (
-	"ComicCrawler/utils"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -183,6 +182,8 @@ func GetHtmlDoc(cookiesParam []*network.CookieParam, galleryUrl string) *goquery
 	// 将 []byte 转换为 io.Reader
 	reader := bytes.NewReader(htmlContent)
 	doc, err := goquery.NewDocumentFromReader(reader)
-	utils.ErrorCheck(err)
+	if err != nil {
+		log.Fatal(err)
+	}
 	return doc
 }

@@ -1,9 +1,13 @@
 package utils
 
 import (
+	"ComicCrawler/client"
 	"encoding/json"
 	"fmt"
+	"github.com/PuerkitoBio/goquery"
+	"github.com/chromedp/cdproto/network"
 	"github.com/gocolly/colly/v2"
+	"github.com/spf13/cast"
 	"log"
 	"math/rand"
 	"os"
@@ -12,6 +16,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -299,4 +304,41 @@ func ExtractSubstringFromText(pattern string, text string) (string, error) {
 	} else {
 		return "", fmt.Errorf("在pattern中未找到匹配的数字")
 	}
+}
+
+// SyncParsePage 并发sync.WaitGroup，通过chromedp解析页面，获取图片地址，并发量为numWorkers，返回实际获取的图片地址数量(int)
+// localGetImageUrlFromPage为不同软件包的内部函数，用于从页面中获取图片地址
+func SyncParsePage(localGetImageUrlFromPage func(*goquery.Document) []string, ImageInfoMapChannel <-chan map[int]string, imageInfoChannel chan<- map[string]string,
+	cookiesParam []*network.CookieParam, numWorkers int) int {
+	sumImage := 0
+	var wg sync.WaitGroup
+
+	for i := 0; i < numWorkers; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+
+			for info := range ImageInfoMapChannel {
+				for index, url := range info {
+					//fmt.Println(index, url)
+					pageDoc := client.GetHtmlDoc(cookiesParam, url)
+					//获取图片地址
+					imageUrlList := localGetImageUrlFromPage(pageDoc)
+					for i, imageUrl := range imageUrlList {
+						imageSuffix := imageUrl[strings.LastIndex(imageUrl, "."):]
+						imageInfo := map[string]string{
+							"imageName": cast.ToString(index) + "_" + cast.ToString(i) + imageSuffix,
+							"imageUrl":  imageUrl,
+						}
+						imageInfoChannel <- imageInfo
+						sumImage++
+					}
+
+				}
+			}
+		}()
+	}
+
+	wg.Wait() // 等待所有任务完成
+	return sumImage
 }

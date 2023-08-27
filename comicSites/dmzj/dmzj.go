@@ -13,7 +13,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
-	"sync"
 	"time"
 )
 
@@ -145,42 +144,6 @@ func getImageUrlFromPage(doc *goquery.Document) []string {
 	return imageUrlList
 }
 
-// syncParsePage 并发sync.WaitGroup，通过chromedp解析页面，获取图片地址，并发量为numWorkers，返回实际获取的图片地址数量(int)
-func syncParsePage(ImageInfoMapChannel <-chan map[int]string, imageInfoChannel chan<- map[string]string,
-	cookiesParam []*network.CookieParam, numWorkers int) int {
-	sumImage := 0
-	var wg sync.WaitGroup
-
-	for i := 0; i < numWorkers; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-
-			for info := range ImageInfoMapChannel {
-				for index, url := range info {
-					//fmt.Println(index, url)
-					pageDoc := client.GetHtmlDoc(cookiesParam, url)
-					//获取图片地址
-					imageUrlList := getImageUrlFromPage(pageDoc)
-					for i, imageUrl := range imageUrlList {
-						imageSuffix := imageUrl[strings.LastIndex(imageUrl, "."):]
-						imageInfo := map[string]string{
-							"imageName": cast.ToString(index) + "_" + cast.ToString(i) + imageSuffix,
-							"imageUrl":  imageUrl,
-						}
-						imageInfoChannel <- imageInfo
-						sumImage++
-					}
-
-				}
-			}
-		}()
-	}
-
-	wg.Wait() // 等待所有任务完成
-	return sumImage
-}
-
 func buildJpegRequestHeaders() http.Header {
 	headers := http.Header{
 		"authority": []string{"images.idmzj.com"},
@@ -230,7 +193,7 @@ func batchDownloadImage(cookiesParam []*network.CookieParam, sortedImagePageInfo
 		}
 		close(imagePageInfoListChannel)
 
-		sumImage := syncParsePage(imagePageInfoListChannel, imageInfoChannel, cookiesParam, numWorkers)
+		sumImage := utils.SyncParsePage(getImageUrlFromPage, imagePageInfoListChannel, imageInfoChannel, cookiesParam, numWorkers)
 		close(imageInfoChannel)
 		//在这个channel里只有sumImage个元素，所以只需要循环sumImage次
 		for i := 0; i < sumImage; i++ {

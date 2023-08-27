@@ -62,7 +62,7 @@
 ```powershell
 ./comic_crawler.exe -h
 ```
-2. 获取gallery信息，并下载图片
+2. 获取gallery信息，并下载图片(url为gallery目录页的url，尾部注意带上`/`)
 ```powershell
 ./comic_crawler.exe -url https://e-hentai.org/g/xxxxxx/xxxxxxxxxx/
 ```
