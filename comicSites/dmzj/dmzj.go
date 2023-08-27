@@ -92,40 +92,6 @@ func checkUpdate(lastUpdateTime string, newTime string) bool {
 	}
 }
 
-//已经弃用的函数
-//// getAllImagePageInfo 从主目录页获取所有图片页地址，返回一个切片，元素为map[int]string，key为图片页序号，value为图片页地址
-//func getAllImagePageInfo(doc *goquery.Document) []map[int]string {
-//	imageInfoStack := stack.Stack{}
-//	var imagePageInfoList []map[int]string
-//	// 找到<div class="cartoon_online_border">
-//	doc.Find("div.cartoon_online_border").Each(func(i int, s *goquery.Selection) {
-//		s.Find("a").Each(func(j int, a *goquery.Selection) {
-//			href, exists := a.Attr("href")
-//			if exists {
-//				imageName := strings.TrimSpace(a.Text())
-//				//从图片页名字中提取图片页序号
-//				indexStr, err := utils.ExtractSubstringFromText(`(\d+)`, imageName)
-//				utils.ErrorCheck(err)
-//				//cast库在转换时字符串若是以 "0" 开头，"07" 转换后得到整型 7，而 "08" 转换后得到整型 0
-//				//https://iokde.com/post/golang-cast64-snare.html
-//				imageIndex, _ := strconv.Atoi(indexStr)
-//
-//				imageInfo := map[int]string{
-//					imageIndex: "https://manhua.dmzj.com" + href,
-//				}
-//				imageInfoStack.Push(imageInfo)
-//			}
-//		})
-//	})
-//	//直接处理得到的是逆序序列，通过栈转换为正序
-//	for !imageInfoStack.IsEmpty() {
-//		item := imageInfoStack.Pop()
-//		imagePageInfoList = append(imagePageInfoList, item.(map[int]string))
-//	}
-//
-//	return imagePageInfoList
-//}
-
 // getAllImagePageInfoBySelector 从主目录页获取所有`selector`图片页地址
 // selector的值为`div.cartoon_online_border`或`div.cartoon_online_border_other`，
 // 返回2个切片，元素均为map[int]string
@@ -179,7 +145,7 @@ func getImageUrlFromPage(doc *goquery.Document) []string {
 	return imageUrlList
 }
 
-// syncParsePage 并发sync.WaitGroup解析页面，获取图片地址，并发量为numWorkers，返回实际获取的图片地址数量(int)
+// syncParsePage 并发sync.WaitGroup，通过chromedp解析页面，获取图片地址，并发量为numWorkers，返回实际获取的图片地址数量(int)
 func syncParsePage(ImageInfoMapChannel <-chan map[int]string, imageInfoChannel chan<- map[string]string,
 	cookiesParam []*network.CookieParam, numWorkers int) int {
 	sumImage := 0
@@ -248,8 +214,8 @@ func buildJpegRequestHeaders() http.Header {
 	return headers
 }
 
+// batchDownloadImage 按batchSize分组渲染页面，获取图片url并保存图片
 func batchDownloadImage(cookiesParam []*network.CookieParam, sortedImagePageInfoList []map[int]string, saveDir string) {
-	//按batchSize分组获取url并保存图片
 	for batchIndex := 0; batchIndex < len(sortedImagePageInfoList); batchIndex += batchSize {
 		//每次循环都重新初始化channel和切片
 		subImagePageInfoList := sortedImagePageInfoList[batchIndex:utils.MinInt(batchIndex+batchSize, len(sortedImagePageInfoList))]

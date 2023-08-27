@@ -69,50 +69,10 @@ func Test_getGalleryInfo(t *testing.T) {
 	}
 }
 
-//已经弃用的函数的测试函数
-//func Test_getAllImagePageInfo(t *testing.T) {
-//	type args struct {
-//		doc *goquery.Document
-//	}
-//	tests := []struct {
-//		name string
-//		args args
-//		want []map[int]string
-//	}{
-//		{
-//			name: "成为夺心魔的必要",
-//			args: args{
-//				doc: client.GetHtmlDoc(cookiesParam, "https://manhua.dmzj.com/chengweiduoxinmodebiyao/"),
-//			},
-//			want: []map[int]string{
-//				{
-//					1: "https://manhua.dmzj.com/chengweiduoxinmodebiyao/102006.shtml#1",
-//				},
-//				{
-//					2: "https://manhua.dmzj.com/chengweiduoxinmodebiyao/102022.shtml#1",
-//				},
-//				{
-//					3: "https://manhua.dmzj.com/chengweiduoxinmodebiyao/103711.shtml#1",
-//				},
-//				{
-//					4: "https://manhua.dmzj.com/chengweiduoxinmodebiyao/103712.shtml#1",
-//				},
-//			},
-//		},
-//	}
-//	for _, tt := range tests {
-//		t.Run(tt.name, func(t *testing.T) {
-//			got := getAllImagePageInfo(tt.args.doc)[0:4]
-//			if !reflect.DeepEqual(got, tt.want) {
-//				t.Errorf("getAllImagePageInfo() = %v, want %v", got, tt.want)
-//			}
-//		})
-//	}
-//}
-
 func Test_getAllImagePageInfoBySelector(t *testing.T) {
 	type args struct {
-		doc *goquery.Document
+		selector string
+		doc      *goquery.Document
 	}
 	tests := []struct {
 		name                       string
@@ -123,7 +83,8 @@ func Test_getAllImagePageInfoBySelector(t *testing.T) {
 		{
 			name: "无其他页",
 			args: args{
-				doc: client.GetHtmlDoc(cookiesParam, "https://manhua.dmzj.com/xianxiashouweiqiang/"),
+				selector: "div.cartoon_online_border_other",
+				doc:      client.GetHtmlDoc(cookiesParam, "https://manhua.dmzj.com/xianxiashouweiqiang/"),
 			},
 			wantImageOtherPageInfoList: []map[int]string{},
 			wantIndexToNameMap:         []map[int]string{},
@@ -131,7 +92,8 @@ func Test_getAllImagePageInfoBySelector(t *testing.T) {
 		{
 			name: "有其他页",
 			args: args{
-				doc: client.GetHtmlDoc(cookiesParam, "https://manhua.dmzj.com/rangwoxinshendangyangdehuainvren/"),
+				selector: "div.cartoon_online_border_other",
+				doc:      client.GetHtmlDoc(cookiesParam, "https://manhua.dmzj.com/rangwoxinshendangyangdehuainvren/"),
 			},
 			wantImageOtherPageInfoList: []map[int]string{
 				{1: "https://manhua.dmzj.com/rangwoxinshendangyangdehuainvren/118153.shtml#1"},
@@ -150,10 +112,36 @@ func Test_getAllImagePageInfoBySelector(t *testing.T) {
 				{6: "短篇06"},
 			},
 		},
+		{
+			name: "主页",
+			args: args{
+				selector: "div.cartoon_online_border",
+				doc:      client.GetHtmlDoc(cookiesParam, "https://manhua.dmzj.com/xianxiashouweiqiang/"),
+			},
+			wantImageOtherPageInfoList: []map[int]string{
+				{1: "https://manhua.dmzj.com/xianxiashouweiqiang/96289.shtml#1"},
+				{2: "https://manhua.dmzj.com/xianxiashouweiqiang/96311.shtml#1"},
+				{3: "https://manhua.dmzj.com/xianxiashouweiqiang/97810.shtml#1"},
+				{4: "https://manhua.dmzj.com/xianxiashouweiqiang/97874.shtml#1"},
+				{5: "https://manhua.dmzj.com/xianxiashouweiqiang/98838.shtml#1"},
+				{6: "https://manhua.dmzj.com/xianxiashouweiqiang/98938.shtml#1"},
+			},
+			wantIndexToNameMap: []map[int]string{
+				{1: "第01话"},
+				{2: "第02话"},
+				{3: "第03话"},
+				{4: "第04话"},
+				{5: "第05话"},
+				{6: "第06话"},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotImageOtherPageInfoList, gotIndexToNameMap := getAllImagePageInfoBySelector("div.cartoon_online_border_other", tt.args.doc)
+			gotImageOtherPageInfoList, gotIndexToNameMap := getAllImagePageInfoBySelector(tt.args.selector, tt.args.doc)
+			if gotImageOtherPageInfoList != nil {
+				gotImageOtherPageInfoList = gotImageOtherPageInfoList[0:6]
+			}
 			if !reflect.DeepEqual(gotImageOtherPageInfoList, tt.wantImageOtherPageInfoList) {
 				for i, j := range gotImageOtherPageInfoList {
 					if !reflect.DeepEqual(j, tt.wantImageOtherPageInfoList[i]) {

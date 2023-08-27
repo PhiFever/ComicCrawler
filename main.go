@@ -1,8 +1,8 @@
 package main
 
 import (
-	"ComicCrawler/dmzj"
-	"ComicCrawler/eh"
+	"ComicCrawler/comicSites/dmzj"
+	"ComicCrawler/comicSites/eh"
 	"ComicCrawler/utils"
 	"flag"
 	"fmt"
@@ -21,7 +21,7 @@ var (
 	listFile   string
 	buildTime  string
 	goVersion  string
-	version    = "v1.5.1"
+	version    = "v2.0.0"
 )
 
 type GalleryDownloader struct{}
