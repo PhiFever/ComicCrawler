@@ -166,17 +166,17 @@ func getAllImagePageInfoBySelector(selector string, doc *goquery.Document) (imag
 
 // getImageUrlFromPage 从单个图片页获取图片地址
 func getImageUrlFromPage(doc *goquery.Document) []string {
-	var imageUrl []string
+	var imageUrlList []string
 	//找到<div class="scrollbar-demo-item"
 	doc.Find("div.scrollbar-demo-item").Each(func(i int, s *goquery.Selection) {
 		s.Find("img").Each(func(j int, img *goquery.Selection) {
 			src, exists := img.Attr("src")
 			if exists {
-				imageUrl = append(imageUrl, src)
+				imageUrlList = append(imageUrlList, src)
 			}
 		})
 	})
-	return imageUrl
+	return imageUrlList
 }
 
 // syncParsePage 并发sync.WaitGroup解析页面，获取图片地址，并发量为numWorkers，返回实际获取的图片地址数量(int)
@@ -195,8 +195,8 @@ func syncParsePage(ImageInfoMapChannel <-chan map[int]string, imageInfoChannel c
 					//fmt.Println(index, url)
 					pageDoc := client.GetHtmlDoc(cookiesParam, url)
 					//获取图片地址
-					imageUrlLists := getImageUrlFromPage(pageDoc)
-					for i, imageUrl := range imageUrlLists {
+					imageUrlList := getImageUrlFromPage(pageDoc)
+					for i, imageUrl := range imageUrlList {
 						imageSuffix := imageUrl[strings.LastIndex(imageUrl, "."):]
 						imageInfo := map[string]string{
 							"imageName": cast.ToString(index) + "_" + cast.ToString(i) + imageSuffix,

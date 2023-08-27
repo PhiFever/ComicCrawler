@@ -110,7 +110,7 @@ func Test_getGalleryInfo(t *testing.T) {
 //	}
 //}
 
-func Test_getAllOtherImagePageInfo(t *testing.T) {
+func Test_getAllImagePageInfoBySelector(t *testing.T) {
 	type args struct {
 		doc *goquery.Document
 	}
@@ -192,6 +192,17 @@ func Test_getImageUrlFromPage(t *testing.T) {
 				`https://images.idmzj.com/x%2F%E5%85%88%E4%B8%8B%E6%89%8B%E4%B8%BA%E5%BC%BA%2F%E7%AC%AC03%E8%AF%9D_1578815283%2F73404787_p2_master1200.jpg`,
 				`https://images.idmzj.com/x%2F%E5%85%88%E4%B8%8B%E6%89%8B%E4%B8%BA%E5%BC%BA%2F%E7%AC%AC03%E8%AF%9D_1578815283%2F73404787_p3_master1200.jpg`,
 				`https://images.idmzj.com/x%2F%E5%85%88%E4%B8%8B%E6%89%8B%E4%B8%BA%E5%BC%BA%2F%E7%AC%AC03%E8%AF%9D_1578815283%2F73404787_p4_master1200.jpg`,
+			},
+		},
+		{
+			name: "FS社主人公in艾尔登法环 01话",
+			args: args{
+				doc: client.GetHtmlDoc(cookiesParam, "https://manhua.dmzj.com/fsshezhurengonginaierdengfahuan/128361.shtml#1"),
+			},
+			want: []string{
+				`https://images.idmzj.com/f%2FFS%E7%A4%BE%E4%B8%BB%E4%BA%BA%E5%85%ACin%E8%89%BE%E5%B0%94%E7%99%BB%E6%B3%95%E7%8E%AF%2F01%2F01.jpg`,
+				`https://images.idmzj.com/f%2FFS%E7%A4%BE%E4%B8%BB%E4%BA%BA%E5%85%ACin%E8%89%BE%E5%B0%94%E7%99%BB%E6%B3%95%E7%8E%AF%2F01%2F02.jpg`,
+				`https://images.idmzj.com/f%2FFS%E7%A4%BE%E4%B8%BB%E4%BA%BA%E5%85%ACin%E8%89%BE%E5%B0%94%E7%99%BB%E6%B3%95%E7%8E%AF%2F01%2F03.jpg`,
 			},
 		},
 	}
