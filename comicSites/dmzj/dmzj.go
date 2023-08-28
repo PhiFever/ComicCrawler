@@ -11,7 +11,6 @@ import (
 	"log"
 	"net/http"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"time"
 )
@@ -43,7 +42,7 @@ func getGalleryInfo(doc *goquery.Document, galleryUrl string) GalleryInfo {
 		galleryInfo.Title = strings.TrimSpace(strings.ReplaceAll(s.Contents().Last().Text(), ">>", ""))
 	})
 
-	//找到<div class="anim-main_list">
+	//找到<div class="anim-main_list">，即为tagList
 	doc.Find(".anim-main_list table tbody tr").Each(func(index int, row *goquery.Selection) {
 		key := strings.TrimSpace(row.Find("th").Text())
 		localKey := strings.ReplaceAll(key, "：", "")
@@ -58,10 +57,8 @@ func getGalleryInfo(doc *goquery.Document, galleryUrl string) GalleryInfo {
 		})
 	})
 
-	rp := strings.NewReplacer("第", "", "话", "")
-	lastChapter, _ := regexp.MatchString(`第(\d+)话`, galleryInfo.TagList["最新收录"][0])
-	if lastChapter {
-		galleryInfo.LastChapter = rp.Replace(galleryInfo.TagList["最新收录"][0])
+	if galleryInfo.TagList["最新收录"] != nil {
+		galleryInfo.LastChapter = galleryInfo.TagList["最新收录"][0]
 	} else {
 		galleryInfo.LastChapter = "未知"
 	}

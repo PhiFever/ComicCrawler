@@ -3,6 +3,7 @@ package dmzj
 import (
 	"ComicCrawler/client"
 	"ComicCrawler/utils"
+	"fmt"
 	"github.com/PuerkitoBio/goquery"
 	"github.com/chromedp/cdproto/network"
 	"reflect"
@@ -16,6 +17,7 @@ var (
 	cookiesParam = client.ConvertCookies(cookies)
 )
 
+// FIXME:函数测试结果与主程序运行结果不一致？？？
 func Test_getGalleryInfo(t *testing.T) {
 	tests := []struct {
 		name       string
@@ -28,14 +30,13 @@ func Test_getGalleryInfo(t *testing.T) {
 			want: GalleryInfo{
 				URL:            "https://manhua.dmzj.com/chengweiduoxinmodebiyao/",
 				Title:          "成为夺心魔的必要",
-				LastChapter:    "149",
+				LastChapter:    "第149话",
 				LastUpdateTime: "2023-08-25",
 				TagList: map[string][]string{
 					"作者":   {"赖惟智"},
+					"分类":   {"青年漫画"},
 					"地域":   {"港台"},
 					"状态":   {"连载中"},
-					"人气":   {"30497493"},
-					"分类":   {"青年漫画"},
 					"题材":   {"欢乐向", "治愈", "西方魔幻"},
 					"最新收录": {"第149话"},
 				},
@@ -44,8 +45,10 @@ func Test_getGalleryInfo(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			doc := client.GetHtmlDoc(cookiesParam, tt.galleryUrl)
-			if got := getGalleryInfo(doc, tt.galleryUrl); !reflect.DeepEqual(got, tt.want) {
+			menuDoc := client.GetHtmlDoc(cookiesParam, tt.galleryUrl)
+			got := getGalleryInfo(menuDoc, tt.galleryUrl)
+			fmt.Println(got)
+			if !reflect.DeepEqual(got, tt.want) {
 				if got.Title != tt.want.Title {
 					t.Errorf("title got: %v, want: %v", got.Title, tt.want.Title)
 				}
