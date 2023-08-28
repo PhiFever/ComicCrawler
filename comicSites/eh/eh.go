@@ -109,10 +109,7 @@ func getAllImagePageUrl(c *colly.Collector, indexUrl string) []string {
 		})
 	})
 	err := c.Visit(indexUrl)
-	if err != nil {
-		log.Fatal(err)
-		return nil
-	}
+	utils.ErrorCheck(err)
 	return imagePageUrls
 }
 
@@ -123,10 +120,7 @@ func getImageUrl(c *colly.Collector, imagePageUrl string) string {
 		imageUrl = e.Attr("src")
 	})
 	err := c.Visit(imagePageUrl)
-	if err != nil {
-		log.Fatal(err)
-		return ""
-	}
+	utils.ErrorCheck(err)
 	return imageUrl
 }
 
@@ -197,12 +191,12 @@ func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
 		//生成缓存文件
 		err := utils.BuildCache(safeTitle, infoJsonPath, galleryInfo)
 		utils.ErrorCheck(err)
-		if onlyInfo {
-			fmt.Println("画廊信息获取完毕，程序自动退出。")
-			return
-		}
 	}
 
+	if onlyInfo {
+		fmt.Println("画廊信息获取完毕，程序自动退出。")
+		return
+	}
 	//重新初始化Collector
 	collector := client.InitCollector(buildJpegRequestHeaders())
 

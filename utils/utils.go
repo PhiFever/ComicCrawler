@@ -308,7 +308,7 @@ func ExtractSubstringFromText(pattern string, text string) (string, error) {
 
 // SyncParsePage 并发sync.WaitGroup，通过chromedp解析页面，获取图片地址，并发量为numWorkers，返回实际获取的图片地址数量(int)
 // localGetImageUrlFromPage为不同软件包的内部函数，用于从页面中获取图片地址
-func SyncParsePage(localGetImageUrlFromPage func(*goquery.Document) []string, ImageInfoMapChannel <-chan map[int]string, imageInfoChannel chan<- map[string]string,
+func SyncParsePage(localGetImageUrlFromPage func(*goquery.Document) []string, imageInfoMapChannel <-chan map[int]string, imageInfoChannel chan<- map[string]string,
 	cookiesParam []*network.CookieParam, numWorkers int) int {
 	sumImage := 0
 	var wg sync.WaitGroup
@@ -320,7 +320,7 @@ func SyncParsePage(localGetImageUrlFromPage func(*goquery.Document) []string, Im
 		go func() {
 			defer wg.Done()
 
-			for info := range ImageInfoMapChannel {
+			for info := range imageInfoMapChannel {
 				for index, url := range info {
 					//fmt.Println(index, url)
 					pageDoc := client.GetHtmlDoc(cookiesParam, url)

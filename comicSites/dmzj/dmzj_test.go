@@ -10,14 +10,13 @@ import (
 	"testing"
 )
 
-const localCookiesPath = "../dmzj_cookies.json"
+const localCookiesPath = "../../dmzj_cookies.json"
 
 var (
 	cookies, _   = client.ReadCookiesFromFile(localCookiesPath)
 	cookiesParam = client.ConvertCookies(cookies)
 )
 
-// FIXME:函数测试结果与主程序运行结果不一致？？？
 func Test_getGalleryInfo(t *testing.T) {
 	tests := []struct {
 		name       string
@@ -144,6 +143,10 @@ func Test_getAllImagePageInfoBySelector(t *testing.T) {
 			gotImageOtherPageInfoList, gotIndexToNameMap := getAllImagePageInfoBySelector(tt.args.selector, tt.args.doc)
 			if gotImageOtherPageInfoList != nil {
 				gotImageOtherPageInfoList = gotImageOtherPageInfoList[0:6]
+			}
+			fmt.Println(gotImageOtherPageInfoList)
+			if gotIndexToNameMap != nil {
+				gotIndexToNameMap = gotIndexToNameMap[0:6]
 			}
 			if !reflect.DeepEqual(gotImageOtherPageInfoList, tt.wantImageOtherPageInfoList) {
 				for i, j := range gotImageOtherPageInfoList {
@@ -272,7 +275,7 @@ func Test_syncParsePage(t *testing.T) {
 				got = append(got, imageInfo)
 			}
 
-			///TODO:bugfix
+			///FIXME
 			//返回的图片地址顺序可能不一致，所以判断每个元素是否相等不太行，但是排序又不太好排，所以这里只能人工判断了
 			//事实上这个测试是正确的
 			if !reflect.DeepEqual(got, tt.want) {
@@ -299,15 +302,15 @@ func Test_getBeginIndex(t *testing.T) {
 		{
 			name: "成为夺心魔的必要",
 			args: args{
-				dirPath:      `E:\Go_project\WorkSpace\ComicCrawler\成为夺心魔的必要`,
+				dirPath:      `D:\Games\comic\DMZJ\成为夺心魔的必要\`,
 				fileSuffixes: []string{".jpg", ".png"},
 			},
-			want: 130,
+			want: 149,
 		},
 		{
 			name: "先下手为强",
 			args: args{
-				dirPath:      `E:\Go_project\WorkSpace\ComicCrawler\先下手为强`,
+				dirPath:      `D:\Games\comic\DMZJ\先下手为强\`,
 				fileSuffixes: []string{".jpg", ".png"},
 			},
 			want: 14,

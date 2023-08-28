@@ -37,10 +37,9 @@ func getGalleryInfo(doc *goquery.Document, galleryUrl string) GalleryInfo {
 	galleryInfo.TagList = make(map[string][]string)
 	galleryInfo.URL = galleryUrl
 
-	//找到其中<div class="wrap">下的<div class="path_lv3">元素中的最后一个文本节点即为标题
-	doc.Find("div.wrap div.path_lv3").Each(func(i int, s *goquery.Selection) {
-		galleryInfo.Title = strings.TrimSpace(strings.ReplaceAll(s.Contents().Last().Text(), ">>", ""))
-	})
+	//找到<h1>标签,即为文章标题
+	galleryInfo.Title = strings.TrimSpace(doc.Find("h1").Text())
+	//fmt.Println(galleryInfo.Title)
 
 	//找到<div class="anim-main_list">，即为tagList
 	doc.Find(".anim-main_list table tbody tr").Each(func(index int, row *goquery.Selection) {
@@ -251,10 +250,10 @@ func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
 		//生成缓存文件
 		err := utils.BuildCache(safeTitle, infoJsonPath, galleryInfo)
 		utils.ErrorCheck(err)
-		if onlyInfo {
-			fmt.Println("画廊信息获取完毕，程序自动退出。")
-			return
-		}
+	}
+	if onlyInfo {
+		fmt.Println("画廊信息获取完毕，程序自动退出。")
+		return
 	}
 	fmt.Println("mainBeginIndex=", mainBeginIndex)
 	fmt.Println("otherBeginIndex=", otherBeginIndex)
