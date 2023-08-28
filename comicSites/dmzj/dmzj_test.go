@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
 	"github.com/chromedp/cdproto/network"
+	"github.com/smallnest/chanx"
 	"reflect"
 	"testing"
 )
@@ -218,8 +219,8 @@ func Test_syncParsePage(t *testing.T) {
 	type args struct {
 		tasksData        map[int]string
 		numWorkers       int
-		tasks            chan map[int]string    //此处与原代码不同，原代码为<-chan map[int]string，但是这样会导致无法读取channel
-		imageInfoChannel chan map[string]string //此处与原代码不同，原代码为chan<- map[string]string，但是这样会导致无法读取channel
+		tasks            chan map[int]string                     //此处与原代码不同，原代码为<-chan map[int]string，但是这样会导致无法读取channel
+		imageInfoChannel *chanx.UnboundedChan[map[string]string] //此处与原代码不同，原代码为chan<- map[string]string，但是这样会导致无法读取channel
 		cookiesParam     []*network.CookieParam
 	}
 	tests := []struct {
@@ -232,7 +233,7 @@ func Test_syncParsePage(t *testing.T) {
 			args: args{
 				numWorkers:       5,
 				tasks:            make(chan map[int]string, 5),
-				imageInfoChannel: make(chan map[string]string, 5),
+				imageInfoChannel: chanx.NewUnboundedChan[map[string]string](5),
 				cookiesParam:     cookiesParam,
 				tasksData: map[int]string{
 					2:   "https://manhua.dmzj.com/chengweiduoxinmodebiyao/102022.shtml#1",
@@ -271,7 +272,7 @@ func Test_syncParsePage(t *testing.T) {
 			// 接收所有发送到imageInfoChannel通道的数据
 			var got []map[string]string
 			for i := 0; i < len(tt.want); i++ {
-				imageInfo := <-tt.args.imageInfoChannel
+				imageInfo := <-tt.args.imageInfoChannel.Out
 				got = append(got, imageInfo)
 			}
 

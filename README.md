@@ -78,8 +78,8 @@
 ## 编译release版本命令
 
 ```powershell
-go build -ldflags="-s -w" -ldflags "-X 'main.buildTime=$(git show -s --format=%cd)' -X 'main.goVersion=$(go version)'" main.go
+go build -ldflags="-s -w" -ldflags "-X 'main.buildTime=$(git show -s --format=%cd)' -X 'main.goVersion=$(go version)'" -o ComicCrawler.exe main.go
 ```
 ```powershell
-go build -ldflags "-X 'main.buildTime=$(git show -s --format=%cd)' -X 'main.goVersion=$(go version)'" main.go
+go build -ldflags "-X 'main.buildTime=$(git show -s --format=%cd)' -X 'main.goVersion=$(go version)'" -o ComicCrawler.exe main.go
 ```

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
 	"github.com/chromedp/cdproto/network"
+	"github.com/smallnest/chanx"
 	"github.com/spf13/cast"
 	"log"
 	"net/http"
@@ -17,9 +18,9 @@ import (
 
 const (
 	cookiesPath       = `dmzj_cookies.json`
-	numWorkers        = 5   //页面处理的并发量
-	batchSize         = 10  //每次下载的图片页面数量，建议为numWorkers的整数倍
-	maxImageInOnePage = 100 //单个图片页中最大图片数量，用于初始化channel（感觉应该不会超过50，但是为了保险起见还是设置为100）
+	numWorkers        = 5  //页面处理的并发量
+	batchSize         = 10 //每次下载的图片页面数量，建议为numWorkers的整数倍
+	maxImageInOnePage = 30 //单个图片页中最大图片数量，用于初始化imageInfoChannelSize，设置一个合适的数量可以减少无限有缓冲channel的扩容消耗
 	otherDir          = `其他系列`
 )
 
@@ -181,7 +182,8 @@ func batchDownloadImage(cookiesParam []*network.CookieParam, imagePageInfoList [
 		imagePageInfoListChannel := make(chan map[int]string, len(subImagePageInfoList))
 		//每个图片页中最多有maxImageInOnePage张图片
 		imageInfoChannelSize := maxImageInOnePage * len(subImagePageInfoList)
-		imageInfoChannel := make(chan map[string]string, imageInfoChannelSize)
+		//创建一个无限大小有缓冲channel，用于存储所有图片的信息
+		imageInfoListChannel := chanx.NewUnboundedChan[map[string]string](imageInfoChannelSize)
 		var imageInfoList []map[string]string
 
 		for _, info := range subImagePageInfoList {
@@ -189,12 +191,10 @@ func batchDownloadImage(cookiesParam []*network.CookieParam, imagePageInfoList [
 		}
 		close(imagePageInfoListChannel)
 
-		sumImage := utils.SyncParsePage(getImageUrlFromPage, imagePageInfoListChannel, imageInfoChannel, cookiesParam, numWorkers)
-		close(imageInfoChannel)
-		//FIXME:当sumImage>imageInfoChannelSize时，会导致程序死锁
-		//在这个channel里只有sumImage个元素，所以只需要循环sumImage次
-		for i := 0; i < sumImage; i++ {
-			imageInfo := <-imageInfoChannel
+		utils.SyncParsePage(getImageUrlFromPage, imagePageInfoListChannel, imageInfoListChannel, cookiesParam, numWorkers)
+		close(imageInfoListChannel.In)
+
+		for imageInfo := range imageInfoListChannel.Out {
 			imageInfoList = append(imageInfoList, imageInfo)
 		}
 		// 进行本次处理目录中所有图片的批量保存

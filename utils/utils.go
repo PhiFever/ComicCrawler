@@ -7,6 +7,7 @@ import (
 	"github.com/PuerkitoBio/goquery"
 	"github.com/chromedp/cdproto/network"
 	"github.com/gocolly/colly/v2"
+	"github.com/smallnest/chanx"
 	"github.com/spf13/cast"
 	"log"
 	"math/rand"
@@ -308,9 +309,8 @@ func ExtractSubstringFromText(pattern string, text string) (string, error) {
 
 // SyncParsePage 并发sync.WaitGroup，通过chromedp解析页面，获取图片地址，并发量为numWorkers，返回实际获取的图片地址数量(int)
 // localGetImageUrlFromPage为不同软件包的内部函数，用于从页面中获取图片地址
-func SyncParsePage(localGetImageUrlFromPage func(*goquery.Document) []string, imageInfoMapChannel <-chan map[int]string, imageInfoChannel chan<- map[string]string,
-	cookiesParam []*network.CookieParam, numWorkers int) int {
-	sumImage := 0
+func SyncParsePage(localGetImageUrlFromPage func(*goquery.Document) []string, imagePageInfoListChannel <-chan map[int]string, imageInfoListChannel *chanx.UnboundedChan[map[string]string],
+	cookiesParam []*network.CookieParam, numWorkers int) {
 	var wg sync.WaitGroup
 
 	//WaitGroup 使用计数器来工作。当创建 WaitGroup 时，其计数器初始值为 0
@@ -320,7 +320,7 @@ func SyncParsePage(localGetImageUrlFromPage func(*goquery.Document) []string, im
 		go func() {
 			defer wg.Done()
 
-			for info := range imageInfoMapChannel {
+			for info := range imagePageInfoListChannel {
 				for index, url := range info {
 					//fmt.Println(index, url)
 					pageDoc := client.GetHtmlDoc(cookiesParam, url)
@@ -333,8 +333,7 @@ func SyncParsePage(localGetImageUrlFromPage func(*goquery.Document) []string, im
 							"imageName": cast.ToString(index) + "_" + cast.ToString(i) + imageSuffix,
 							"imageUrl":  imageUrl,
 						}
-						imageInfoChannel <- imageInfo
-						sumImage++
+						imageInfoListChannel.In <- imageInfo
 					}
 
 				}
@@ -343,5 +342,4 @@ func SyncParsePage(localGetImageUrlFromPage func(*goquery.Document) []string, im
 	}
 
 	wg.Wait() // 等待所有任务完成
-	return sumImage
 }
