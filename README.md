@@ -3,6 +3,7 @@
 
 ## TODO
 1. dmzj目录带分页的情况无法处理
+2. dmzj的`其他作品`有时候会出现大于`dmzj.maxImageInOnePage`页的单行本，导致程序卡住
 ## 缓存文件格式
 
 `galleryInfo.json`

@@ -313,6 +313,8 @@ func SyncParsePage(localGetImageUrlFromPage func(*goquery.Document) []string, Im
 	sumImage := 0
 	var wg sync.WaitGroup
 
+	//WaitGroup 使用计数器来工作。当创建 WaitGroup 时，其计数器初始值为 0
+	//当调用 Add 方法时，计数器增加 1，当调用 Done 方法时，计数器减少 1。当调用 Wait 方法时，goroutine 将会阻塞，直至计数器数值为 0。
 	for i := 0; i < numWorkers; i++ {
 		wg.Add(1)
 		go func() {
@@ -324,6 +326,7 @@ func SyncParsePage(localGetImageUrlFromPage func(*goquery.Document) []string, Im
 					pageDoc := client.GetHtmlDoc(cookiesParam, url)
 					//获取图片地址
 					imageUrlList := localGetImageUrlFromPage(pageDoc)
+					//FIXME:或许这里应该设置一个临时channel，用于存储该页面的imageInfo,在函数的最后再遍历所有临时channel并把数据写入此时已经确定实际大小的imageInfoChannel
 					for i, imageUrl := range imageUrlList {
 						imageSuffix := imageUrl[strings.LastIndex(imageUrl, "."):]
 						imageInfo := map[string]string{

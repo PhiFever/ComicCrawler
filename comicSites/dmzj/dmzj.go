@@ -178,10 +178,10 @@ func buildJpegRequestHeaders() http.Header {
 }
 
 // batchDownloadImage 按batchSize分组渲染页面，获取图片url并保存图片
-func batchDownloadImage(cookiesParam []*network.CookieParam, sortedImagePageInfoList []map[int]string, saveDir string) {
-	for batchIndex := 0; batchIndex < len(sortedImagePageInfoList); batchIndex += batchSize {
+func batchDownloadImage(cookiesParam []*network.CookieParam, imagePageInfoList []map[int]string, saveDir string) {
+	for batchIndex := 0; batchIndex < len(imagePageInfoList); batchIndex += batchSize {
 		//每次循环都重新初始化channel和切片
-		subImagePageInfoList := sortedImagePageInfoList[batchIndex:utils.MinInt(batchIndex+batchSize, len(sortedImagePageInfoList))]
+		subImagePageInfoList := imagePageInfoList[batchIndex:utils.MinInt(batchIndex+batchSize, len(imagePageInfoList))]
 		imagePageInfoListChannel := make(chan map[int]string, len(subImagePageInfoList))
 		//每个图片页中最多有maxImageInOnePage张图片
 		imageInfoChannelSize := maxImageInOnePage * len(subImagePageInfoList)
@@ -195,6 +195,7 @@ func batchDownloadImage(cookiesParam []*network.CookieParam, sortedImagePageInfo
 
 		sumImage := utils.SyncParsePage(getImageUrlFromPage, imagePageInfoListChannel, imageInfoChannel, cookiesParam, numWorkers)
 		close(imageInfoChannel)
+		//FIXME:当sumImage>imageInfoChannelSize时，会导致程序死锁
 		//在这个channel里只有sumImage个元素，所以只需要循环sumImage次
 		for i := 0; i < sumImage; i++ {
 			imageInfo := <-imageInfoChannel
@@ -273,6 +274,10 @@ func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
 		err = utils.BuildCache(otherPath, "menu.json", otherIndexToNameMap)
 		utils.ErrorCheck(err)
 	}
+	fmt.Println("正在下载主线剧情...")
 	batchDownloadImage(cookiesParam, imagePageInfoList, safeTitle)
+	fmt.Println("主线剧情下载完毕")
+	fmt.Println("正在下载其他系列...")
 	batchDownloadImage(cookiesParam, otherImagePageInfoList, otherPath)
+	fmt.Println("其他系列下载完毕")
 }
