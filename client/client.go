@@ -141,28 +141,28 @@ func ConvertCookies(cookies []Cookie) []*network.CookieParam {
 // GetRenderedPage 获取经过JavaScript渲染后的页面
 func GetRenderedPage(url string, cookieParams []*network.CookieParam) ([]byte, error) {
 	log.Println("正在渲染页面:", url)
-	//ctx := buildChromeCTX()
-	opts := append(chromedp.DefaultExecAllocatorOptions[:],
+	//chromeCtx := buildChromeCTX()
+	options := append(chromedp.DefaultExecAllocatorOptions[:],
 		chromedp.Flag("headless", true),    // 是否以无头模式运行
 		chromedp.Flag("disable-gpu", true), // 禁用GPU
 		chromedp.Flag("no-sandbox", true),  // 禁用沙盒模式
 		chromedp.Flag("–disable-plugins", true),
 		chromedp.UserAgent(`Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/73.0.3683.103 Safari/537.36`),
 	)
-	allocCtx, cancel := chromedp.NewExecAllocator(context.Background(), opts...)
+	allocCtx, cancel := chromedp.NewExecAllocator(context.Background(), options...)
 	defer cancel()
 
-	ctx, cancel := chromedp.NewContext(
-		allocCtx,
-		chromedp.WithLogf(log.Printf),
-	)
+	chromeCtx, cancel := chromedp.NewContext(allocCtx, chromedp.WithLogf(log.Printf))
+	defer cancel()
+
+	timeoutCtx, cancel := context.WithTimeout(chromeCtx, 10*time.Second)
 	defer cancel()
 
 	var htmlContent string
-	err := chromedp.Run(ctx,
+	err := chromedp.Run(timeoutCtx,
 		network.SetCookies(cookieParams),
 		chromedp.Navigate(url), // 替换为你想要访问的网址
-		// 等待<div class="anim-main_list">节点加载完毕（实际上不好用）
+		// 等待<div class="anim-main_list">(即selector节点)加载完毕（感觉不好用）
 		//chromedp.WaitVisible("div.anim-main_list", chromedp.ByQuery),
 		// 等待5秒，保证页面加载完毕
 		chromedp.Sleep(5*time.Second),

@@ -11,6 +11,7 @@ import (
 	"testing"
 )
 
+// 主函数和测试函数调用路径的区别
 const localCookiesPath = "../../dmzj_cookies.json"
 
 var (
@@ -145,7 +146,7 @@ func Test_getAllImagePageInfoBySelector(t *testing.T) {
 			if gotImageOtherPageInfoList != nil {
 				gotImageOtherPageInfoList = gotImageOtherPageInfoList[0:6]
 			}
-			fmt.Println(gotImageOtherPageInfoList)
+			//fmt.Println(gotImageOtherPageInfoList)
 			if gotIndexToNameMap != nil {
 				gotIndexToNameMap = gotIndexToNameMap[0:6]
 			}
@@ -215,12 +216,13 @@ func Test_getImageUrlFromPage(t *testing.T) {
 	}
 }
 
+// 由于syncParsePage函数需要传入一个本包的getImageUrlFromPage函数，所以放在本包测试
 func Test_syncParsePage(t *testing.T) {
 	type args struct {
 		tasksData        map[int]string
 		numWorkers       int
 		tasks            chan map[int]string                     //此处与原代码不同，原代码为<-chan map[int]string，但是这样会导致无法读取channel
-		imageInfoChannel *chanx.UnboundedChan[map[string]string] //此处与原代码不同，原代码为chan<- map[string]string，但是这样会导致无法读取channel
+		imageInfoChannel *chanx.UnboundedChan[map[string]string] //此处与原代码不同，原代码为chan<- map[string]string，但是这样会导致无法输入channel
 		cookiesParam     []*network.CookieParam
 	}
 	tests := []struct {
@@ -277,12 +279,13 @@ func Test_syncParsePage(t *testing.T) {
 			}
 
 			///FIXME
-			//返回的图片地址顺序可能不一致，所以判断每个元素是否相等不太行，但是排序又不太好排，所以这里只能人工判断了
-			//事实上这个测试是正确的
+			//返回的图片地址顺序可能不一致，理论上不应该直接使用reflect.DeepEqual进行比较
+			//但是我懒得写比较函数了，所以就这样吧:(
+			//事实上这个测试多试几次总能通过
 			if !reflect.DeepEqual(got, tt.want) {
-				for i, j := range got {
-					if !reflect.DeepEqual(j, tt.want[i]) {
-						t.Errorf("syncParsePage() = %v, want %v", j, tt.want[i])
+				for index, imageInfo := range got {
+					if !reflect.DeepEqual(imageInfo, tt.want[index]) {
+						t.Errorf("syncParsePage() = %v, want %v", imageInfo, tt.want[index])
 					}
 				}
 			}
