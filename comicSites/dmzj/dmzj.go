@@ -214,8 +214,7 @@ func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
 	otherBeginIndex := 0
 	needUpdate := false
 
-	cookies, err := client.ReadCookiesFromFile(cookiesPath)
-	utils.ErrorCheck(err)
+	cookies := client.ReadCookiesFromFile(cookiesPath)
 	cookiesParam := client.ConvertCookies(cookies)
 	menuDoc := client.GetHtmlDoc(cookiesParam, galleryUrl)
 
@@ -263,7 +262,7 @@ func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
 	otherImagePageInfoList, otherIndexToNameMap := getAllImagePageInfoBySelector("div.cartoon_online_border_other", menuDoc)
 	otherImagePageInfoList = otherImagePageInfoList[otherBeginIndex:]
 
-	err = utils.BuildCache(safeTitle, "menu.json", indexToNameMap)
+	err := utils.BuildCache(safeTitle, "menu.json", indexToNameMap)
 	utils.ErrorCheck(err)
 	otherPath := filepath.Join(safeTitle, otherDir)
 	if otherImagePageInfoList != nil {

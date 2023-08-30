@@ -1,5 +1,5 @@
 ## 支持站点
-目前支持`e-hentai.org`,`manhua.dmzj.com`(需要放在同级目录下的cookies.json，可以通过EditThisCookie导出，注意调整翻页模式，使其中的fanyemodeval=2)
+目前支持`e-hentai.org`,`manhua.dmzj.com`(需要放在同级目录下的dmzi_cookies.json，可以通过EditThisCookie导出，注意调整翻页模式，使其中的fanyemodeval=2)
 ## TODO
 1. dmzj目录带分页的情况无法处理（或许应该使用chromedp模拟点击处理，不过这种情况比较少，暂时懒得改了:)）
 ## 缓存文件格式
@@ -80,3 +80,9 @@ go build -ldflags="-s -w" -ldflags "-X 'main.buildTime=$(git show -s --format=%c
 ```powershell
 go build -ldflags "-X 'main.buildTime=$(git show -s --format=%cd)' -X 'main.goVersion=$(go version)'" -o ComicCrawler.exe main.go
 ```
+## 注意事项
+- 请确保您的网络连接正常，并且能够访问支持的站点。
+- 请遵守站点的相关规定和版权要求。
+- 请使用合法、合规的方式进行爬取，遵守网站的爬虫规范和使用协议。
+- 请尊重网站的服务器负载和带宽限制，避免对其造成过大的压力。
+- 请避免频繁的请求和大量的并发连接，以免对网站的正常运行造成干扰。

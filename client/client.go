@@ -95,12 +95,12 @@ type Cookie struct {
 }
 
 // ReadCookiesFromFile 从文件中读取 Cookies
-func ReadCookiesFromFile(filePath string) ([]Cookie, error) {
+func ReadCookiesFromFile(filePath string) []Cookie {
 	var cookies []Cookie
 
 	file, err := os.Open(filePath)
 	if err != nil {
-		return nil, err
+		log.Fatal(err)
 	}
 	defer func(file *os.File) {
 		err := file.Close()
@@ -111,15 +111,15 @@ func ReadCookiesFromFile(filePath string) ([]Cookie, error) {
 
 	data, err := io.ReadAll(file)
 	if err != nil {
-		return nil, err
+		log.Fatal(err)
 	}
 
 	err = json.Unmarshal(data, &cookies)
 	if err != nil {
-		return nil, err
+		log.Fatal(err)
 	}
 
-	return cookies, nil
+	return cookies
 }
 
 // ConvertCookies 将从文件中读取的 Cookies 转换为 chromedp 需要的格式
@@ -141,13 +141,12 @@ func ConvertCookies(cookies []Cookie) []*network.CookieParam {
 // GetRenderedPage 获取经过JavaScript渲染后的页面
 func GetRenderedPage(url string, cookieParams []*network.CookieParam) ([]byte, error) {
 	log.Println("正在渲染页面:", url)
-	//chromeCtx := buildChromeCTX()
 	options := append(chromedp.DefaultExecAllocatorOptions[:],
 		chromedp.Flag("headless", true),    // 是否以无头模式运行
 		chromedp.Flag("disable-gpu", true), // 禁用GPU
 		chromedp.Flag("no-sandbox", true),  // 禁用沙盒模式
 		chromedp.Flag("–disable-plugins", true),
-		chromedp.UserAgent(`Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/73.0.3683.103 Safari/537.36`),
+		chromedp.UserAgent(`Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36`),
 	)
 	allocCtx, cancel := chromedp.NewExecAllocator(context.Background(), options...)
 	defer cancel()
@@ -155,7 +154,8 @@ func GetRenderedPage(url string, cookieParams []*network.CookieParam) ([]byte, e
 	chromeCtx, cancel := chromedp.NewContext(allocCtx, chromedp.WithLogf(log.Printf))
 	defer cancel()
 
-	timeoutCtx, cancel := context.WithTimeout(chromeCtx, 10*time.Second)
+	// 超时时间为30秒
+	timeoutCtx, cancel := context.WithTimeout(chromeCtx, 30*time.Second)
 	defer cancel()
 
 	var htmlContent string

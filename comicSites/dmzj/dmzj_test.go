@@ -15,7 +15,7 @@ import (
 const localCookiesPath = "../../dmzj_cookies.json"
 
 var (
-	cookies, _   = client.ReadCookiesFromFile(localCookiesPath)
+	cookies      = client.ReadCookiesFromFile(localCookiesPath)
 	cookiesParam = client.ConvertCookies(cookies)
 )
 
