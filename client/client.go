@@ -16,6 +16,8 @@ import (
 	"time"
 )
 
+const DEBUG_MODE = false
+
 func InitCollector(headers http.Header) *colly.Collector {
 	c := colly.NewCollector(
 	//表示异步抓取
@@ -142,9 +144,9 @@ func ConvertCookies(cookies []Cookie) []*network.CookieParam {
 func GetRenderedPage(url string, cookieParams []*network.CookieParam) ([]byte, error) {
 	log.Println("正在渲染页面:", url)
 	options := append(chromedp.DefaultExecAllocatorOptions[:],
-		chromedp.Flag("headless", true),    // 是否以无头模式运行
-		chromedp.Flag("disable-gpu", true), // 禁用GPU
-		chromedp.Flag("no-sandbox", true),  // 禁用沙盒模式
+		chromedp.Flag("headless", !DEBUG_MODE), // 是否以无头模式运行
+		chromedp.Flag("disable-gpu", true),     // 禁用GPU
+		chromedp.Flag("no-sandbox", true),      // 禁用沙盒模式
 		chromedp.Flag("–disable-plugins", true),
 		chromedp.UserAgent(`Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36`),
 	)
