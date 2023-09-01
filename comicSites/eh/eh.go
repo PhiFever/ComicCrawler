@@ -198,7 +198,7 @@ func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
 		return
 	}
 	//重新初始化Collector
-	collector := client.InitCollector(buildJpegRequestHeaders())
+	collector := client.InitJPEGCollector(buildJpegRequestHeaders())
 
 	sumPage := int(math.Ceil(float64(galleryInfo.TotalImage) / float64(imageInOnepage)))
 	for i := beginIndex; i < sumPage; i++ {

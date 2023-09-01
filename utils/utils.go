@@ -343,3 +343,26 @@ func SyncParsePage(localGetImageUrlFromPage func(*goquery.Document) []string, im
 
 	wg.Wait() // 等待所有任务完成
 }
+
+func CheckUpdate(lastUpdateTime string, newTime string) bool {
+	layout := "2006-01-02" //时间格式模板
+	parsedDate1, err := time.Parse(layout, lastUpdateTime)
+	if err != nil {
+		fmt.Println("日期解析错误:", err)
+		return true
+	}
+	parsedDate2, err := time.Parse(layout, newTime)
+	if err != nil {
+		fmt.Println("日期解析错误:", err)
+		return true
+	}
+
+	if parsedDate1.Before(parsedDate2) {
+		return true
+	} else if parsedDate1.After(parsedDate2) {
+		fmt.Println("解析的日期晚于当前日期，galleryInfo.json文件异常")
+		return true
+	} else {
+		return false
+	}
+}

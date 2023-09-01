@@ -18,7 +18,7 @@ import (
 
 const DEBUG_MODE = false
 
-func InitCollector(headers http.Header) *colly.Collector {
+func InitJPEGCollector(headers http.Header) *colly.Collector {
 	c := colly.NewCollector(
 	//表示异步抓取
 	//colly.Async(true),
@@ -188,4 +188,24 @@ func GetHtmlDoc(cookiesParam []*network.CookieParam, galleryUrl string) *goquery
 		log.Fatal(err)
 	}
 	return doc
+}
+
+func InitCookiesCollector(cookies []Cookie, baseUrl string) *colly.Collector {
+	//初始化Collector
+	baseCollector := colly.NewCollector(
+		colly.UserAgent(`Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36 Edg/115.0.1901.203`),
+	)
+	// 将Cookies添加到Collector
+	for _, cookie := range cookies {
+		err := baseCollector.SetCookies(baseUrl, []*http.Cookie{
+			{
+				Name:  cookie.Name,
+				Value: cookie.Value,
+			},
+		})
+		if err != nil {
+			log.Fatalln(err)
+		}
+	}
+	return baseCollector
 }

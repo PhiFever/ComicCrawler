@@ -294,3 +294,47 @@ func TestSortMapsByIntKey(t *testing.T) {
 		})
 	}
 }
+
+func TestCheckUpdate(t *testing.T) {
+	type args struct {
+		lastUpdateTime string
+		newTime        string
+	}
+	tests := []struct {
+		name string
+		args args
+		want bool
+	}{
+		{
+			name: "更新",
+			args: args{
+				lastUpdateTime: "2021-08-25",
+				newTime:        "2023-08-25",
+			},
+			want: true,
+		},
+		{
+			name: "不更新",
+			args: args{
+				lastUpdateTime: "2023-08-25",
+				newTime:        "2023-08-25",
+			},
+			want: false,
+		},
+		{
+			name: "异常",
+			args: args{
+				lastUpdateTime: "2023-08-25",
+				newTime:        "2021-08-25",
+			},
+			want: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := CheckUpdate(tt.args.lastUpdateTime, tt.args.newTime); got != tt.want {
+				t.Errorf("checkUpdate() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

@@ -65,46 +65,23 @@ func getGalleryInfo(doc *goquery.Document, galleryUrl string) GalleryInfo {
 	return galleryInfo
 }
 
-func checkUpdate(lastUpdateTime string, newTime string) bool {
-	layout := "2006-01-02" //时间格式模板
-	parsedDate1, err := time.Parse(layout, lastUpdateTime)
-	if err != nil {
-		fmt.Println("日期解析错误:", err)
-		return true
-	}
-	parsedDate2, err := time.Parse(layout, newTime)
-	if err != nil {
-		fmt.Println("日期解析错误:", err)
-		return true
-	}
-
-	if parsedDate1.Before(parsedDate2) {
-		return true
-	} else if parsedDate1.After(parsedDate2) {
-		fmt.Println("解析的日期晚于当前日期，galleryInfo.json文件异常")
-		return true
-	} else {
-		return false
-	}
-}
-
 // getAllImagePageInfoBySelector 从主目录页获取所有`selector`图片页地址
 // selector的值为`div.cartoon_online_border`或`div.cartoon_online_border_other`，
 // 返回2个切片，元素均为map[int]string
 // imageOtherPageInfoList key为图片页序号，value为图片页地址
 // indexToNameMap key为图片页序号，value为图片页名字
-func getAllImagePageInfoBySelector(selector string, doc *goquery.Document) (imageOtherPageInfoList []map[int]string, indexToNameMap []map[int]string) {
+func getAllImagePageInfoBySelector(selector string, doc *goquery.Document) (imagePageInfoList []map[int]string, indexToNameMap []map[int]string) {
 	imageInfoStack := stack.Stack{}
 	// 找到<div class="cartoon_online_border">
 	doc.Find(selector).Each(func(i int, s *goquery.Selection) {
 		s.Find("a").Each(func(j int, a *goquery.Selection) {
 			href, exists := a.Attr("href")
 			if exists {
-				imageName := strings.TrimSpace(a.Text())
-				imageInfo := map[string]string{
-					imageName: "https://manhua.dmzj.com" + href,
+				imagePageTitle := strings.TrimSpace(a.Text())
+				imagePageInfo := map[string]string{
+					imagePageTitle: "https://manhua.dmzj.com" + href,
 				}
-				imageInfoStack.Push(imageInfo)
+				imageInfoStack.Push(imagePageInfo)
 			}
 		})
 	})
@@ -114,16 +91,16 @@ func getAllImagePageInfoBySelector(selector string, doc *goquery.Document) (imag
 	for !imageInfoStack.IsEmpty() {
 		item := imageInfoStack.Pop()
 		imageInfo := item.(map[string]string)
-		for imageName, imageUrl := range imageInfo {
-			imageOtherPageInfo := map[int]string{
-				index: imageUrl,
+		for imagePageTitle, imagePageUrl := range imageInfo {
+			imagePageInfo := map[int]string{
+				index: imagePageUrl,
 			}
-			imageOtherPageInfoList = append(imageOtherPageInfoList, imageOtherPageInfo)
-			indexToNameMap = append(indexToNameMap, map[int]string{index: imageName})
+			imagePageInfoList = append(imagePageInfoList, imagePageInfo)
+			indexToNameMap = append(indexToNameMap, map[int]string{index: imagePageTitle})
 			index++
 		}
 	}
-	return imageOtherPageInfoList, indexToNameMap
+	return imagePageInfoList, indexToNameMap
 }
 
 // getImageUrlFromPage 从单个图片页获取图片地址
@@ -198,7 +175,7 @@ func batchDownloadImage(cookiesParam []*network.CookieParam, imagePageInfoList [
 			imageInfoList = append(imageInfoList, imageInfo)
 		}
 		// 进行本次处理目录中所有图片的批量保存
-		baseCollector := client.InitCollector(buildJpegRequestHeaders())
+		baseCollector := client.InitJPEGCollector(buildJpegRequestHeaders())
 		err := utils.SaveImages(baseCollector, imageInfoList, saveDir)
 		utils.ErrorCheck(err)
 
@@ -230,7 +207,7 @@ func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
 		err := utils.LoadCache(filepath.Join(safeTitle, infoJsonPath), &lastGalleryInfo)
 		utils.ErrorCheck(err)
 
-		needUpdate = checkUpdate(lastGalleryInfo.LastUpdateTime, galleryInfo.LastUpdateTime)
+		needUpdate = utils.CheckUpdate(lastGalleryInfo.LastUpdateTime, galleryInfo.LastUpdateTime)
 		if needUpdate {
 			fmt.Println("发现新章节，更新下载记录")
 			err := utils.BuildCache(safeTitle, infoJsonPath, galleryInfo)
