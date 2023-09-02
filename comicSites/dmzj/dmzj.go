@@ -234,16 +234,18 @@ func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
 	fmt.Println("mainBeginIndex=", mainBeginIndex)
 	fmt.Println("otherBeginIndex=", otherBeginIndex)
 
-	imagePageInfoList, indexToNameMap := getImagePageInfoListBySelector("div.cartoon_online_border", menuDoc)
+	//主线剧情
+	imagePageInfoList, indexToTitleMapList := getImagePageInfoListBySelector("div.cartoon_online_border", menuDoc)
 	imagePageInfoList = imagePageInfoList[mainBeginIndex:]
-	otherImagePageInfoList, otherIndexToNameMap := getImagePageInfoListBySelector("div.cartoon_online_border_other", menuDoc)
+	//其他系列
+	otherImagePageInfoList, otherIndexToTitleMapList := getImagePageInfoListBySelector("div.cartoon_online_border_other", menuDoc)
 	otherImagePageInfoList = otherImagePageInfoList[otherBeginIndex:]
 
-	err := utils.BuildCache(safeTitle, "menu.json", indexToNameMap)
+	err := utils.BuildCache(safeTitle, "menu.json", indexToTitleMapList)
 	utils.ErrorCheck(err)
 	otherPath := filepath.Join(safeTitle, otherDir)
 	if otherImagePageInfoList != nil {
-		err = utils.BuildCache(otherPath, "menu.json", otherIndexToNameMap)
+		err = utils.BuildCache(otherPath, "menu.json", otherIndexToTitleMapList)
 		utils.ErrorCheck(err)
 	}
 	fmt.Println("正在下载主线剧情...")
