@@ -3,7 +3,6 @@ package main
 import (
 	"ComicCrawler/comicSites/dmzj"
 	"ComicCrawler/comicSites/eh"
-	"ComicCrawler/comicSites/zuimh"
 	"ComicCrawler/utils"
 	"flag"
 	"fmt"
@@ -35,9 +34,6 @@ func (gd GalleryDownloader) Download(infoJson string, url string, onlyInfo bool)
 	} else if matched, _ := regexp.MatchString(`^https://manhua.dmzj.com/[a-z0-9]*/$`, url); matched {
 		//fmt.Println("调用dmzj包的DownloadGallery函数")
 		dmzj.DownloadGallery(infoJson, url, onlyInfo)
-	} else if matched, _ := regexp.MatchString(`^https://www.zuimh.com/manhua/[a-zA-Z0-9]*/$`, url); matched {
-		//fmt.Println("调用zuimh包的DownloadGallery函数")
-		zuimh.DownloadGallery(infoJson, url, onlyInfo)
 	} else {
 		return fmt.Errorf("未知的url格式：%s", url)
 	}
