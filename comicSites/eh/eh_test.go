@@ -82,8 +82,8 @@ func Test_getAllImagePageUrl(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := getAllImagePageUrl(tt.args.c, tt.args.indexUrl)[0:4]
-			assert.Equalf(t, tt.want, got, "getAllImagePageUrl(%v, %v)", tt.args.c, tt.args.indexUrl)
+			got := getImagePageUrlList(tt.args.c, tt.args.indexUrl)[0:4]
+			assert.Equalf(t, tt.want, got, "getImagePageUrlList(%v, %v)", tt.args.c, tt.args.indexUrl)
 		})
 	}
 }

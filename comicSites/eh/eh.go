@@ -97,8 +97,8 @@ func generateIndexURL(urlStr string, page int) string {
 	return u.String()
 }
 
-// getAllImagePageUrl 获取图片页面的url
-func getAllImagePageUrl(c *colly.Collector, indexUrl string) []string {
+// getImagePageUrlList 获取图片页面的url
+func getImagePageUrlList(c *colly.Collector, indexUrl string) []string {
 	var imagePageUrls []string
 	c.OnHTML("div[id='gdt']", func(e *colly.HTMLElement) {
 		//找到其下所有<div class="gdtm">标签
@@ -205,16 +205,16 @@ func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
 		fmt.Println("\nCurrent index:", i)
 		indexUrl := generateIndexURL(galleryUrl, i)
 		fmt.Println(indexUrl)
-		var imagePageUrls []string
-		imagePageUrls = getAllImagePageUrl(collector, indexUrl)
+		var imagePageUrlList []string
+		imagePageUrlList = getImagePageUrlList(collector, indexUrl)
 		if i == beginIndex {
 			//如果是第一次处理目录，需要去掉前面的余数
-			imagePageUrls = imagePageUrls[remainder:]
+			imagePageUrlList = imagePageUrlList[remainder:]
 		}
 
 		var imageInfoList []map[string]string
 		//根据imagePageUrls获取imageDataList
-		for _, imagePageUrl := range imagePageUrls {
+		for _, imagePageUrl := range imagePageUrlList {
 			imageTitle, imageUrl := getImageInfoFromPage(collector, imagePageUrl)
 			imageInfoList = append(imageInfoList, map[string]string{
 				"imageTitle": imageTitle,
