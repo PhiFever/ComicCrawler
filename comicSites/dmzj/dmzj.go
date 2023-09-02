@@ -65,12 +65,12 @@ func getGalleryInfo(doc *goquery.Document, galleryUrl string) GalleryInfo {
 	return galleryInfo
 }
 
-// getAllImagePageInfoBySelector 从主目录页获取所有`selector`图片页地址
+// getImagePageInfoListBySelector 从主目录页获取所有`selector`图片页地址
 // selector的值为`div.cartoon_online_border`或`div.cartoon_online_border_other`，
 // 返回2个切片，元素均为map[int]string
 // imageOtherPageInfoList key为图片页序号，value为图片页地址
 // indexToNameMap key为图片页序号，value为图片页名字
-func getAllImagePageInfoBySelector(selector string, doc *goquery.Document) (imagePageInfoList []map[int]string, indexToNameMap []map[int]string) {
+func getImagePageInfoListBySelector(selector string, doc *goquery.Document) (imagePageInfoList []map[int]string, indexToTitleMapList []map[int]string) {
 	imageInfoStack := stack.Stack{}
 	// 找到<div class="cartoon_online_border">
 	doc.Find(selector).Each(func(i int, s *goquery.Selection) {
@@ -96,15 +96,15 @@ func getAllImagePageInfoBySelector(selector string, doc *goquery.Document) (imag
 				index: imagePageUrl,
 			}
 			imagePageInfoList = append(imagePageInfoList, imagePageInfo)
-			indexToNameMap = append(indexToNameMap, map[int]string{index: imagePageTitle})
+			indexToTitleMapList = append(indexToTitleMapList, map[int]string{index: imagePageTitle})
 			index++
 		}
 	}
-	return imagePageInfoList, indexToNameMap
+	return imagePageInfoList, indexToTitleMapList
 }
 
-// getImageUrlFromPage 从单个图片页获取图片地址
-func getImageUrlFromPage(doc *goquery.Document) []string {
+// getImageUrlListFromPage 从单个图片页获取图片地址
+func getImageUrlListFromPage(doc *goquery.Document) []string {
 	var imageUrlList []string
 	//找到<div class="scrollbar-demo-item"
 	doc.Find("div.scrollbar-demo-item").Each(func(i int, s *goquery.Selection) {
@@ -168,7 +168,7 @@ func batchDownloadImage(cookiesParam []*network.CookieParam, imagePageInfoList [
 		}
 		close(imagePageInfoListChannel)
 
-		utils.SyncParsePage(getImageUrlFromPage, imagePageInfoListChannel, imageInfoListChannel, cookiesParam, numWorkers)
+		utils.SyncParsePage(getImageUrlListFromPage, imagePageInfoListChannel, imageInfoListChannel, cookiesParam, numWorkers)
 		close(imageInfoListChannel.In)
 
 		for imageInfo := range imageInfoListChannel.Out {
@@ -234,9 +234,9 @@ func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
 	fmt.Println("mainBeginIndex=", mainBeginIndex)
 	fmt.Println("otherBeginIndex=", otherBeginIndex)
 
-	imagePageInfoList, indexToNameMap := getAllImagePageInfoBySelector("div.cartoon_online_border", menuDoc)
+	imagePageInfoList, indexToNameMap := getImagePageInfoListBySelector("div.cartoon_online_border", menuDoc)
 	imagePageInfoList = imagePageInfoList[mainBeginIndex:]
-	otherImagePageInfoList, otherIndexToNameMap := getAllImagePageInfoBySelector("div.cartoon_online_border_other", menuDoc)
+	otherImagePageInfoList, otherIndexToNameMap := getImagePageInfoListBySelector("div.cartoon_online_border_other", menuDoc)
 	otherImagePageInfoList = otherImagePageInfoList[otherBeginIndex:]
 
 	err := utils.BuildCache(safeTitle, "menu.json", indexToNameMap)

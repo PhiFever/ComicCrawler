@@ -259,7 +259,7 @@ func ReadListFile(filePath string) ([]string, error) {
 	return list, nil
 }
 
-// SaveImages 保存imageInfoList中的所有图片，imageInfoMap中的每个元素都是一个map，包含两个键值对，imageName和imageUrl
+// SaveImages 保存imageInfoList中的所有图片，imageInfoMap中的每个元素都是一个map，包含两个键值对，imageTitle:title和imageUrl:url
 func SaveImages(baseCollector *colly.Collector, imageInfoList []map[string]string, saveDir string) error {
 	dir, err := filepath.Abs(saveDir)
 	err = os.MkdirAll(dir, os.ModePerm)
@@ -272,9 +272,9 @@ func SaveImages(baseCollector *colly.Collector, imageInfoList []map[string]strin
 	})
 
 	for _, data := range imageInfoList {
-		imageName := data["imageName"]
+		imageTitle := data["imageTitle"]
 		imageUrl := data["imageUrl"]
-		filePath, err := filepath.Abs(filepath.Join(dir, imageName))
+		filePath, err := filepath.Abs(filepath.Join(dir, imageTitle))
 		ErrorCheck(err)
 		err = baseCollector.Request("GET", imageUrl, nil, nil, nil)
 		ErrorCheck(err)
@@ -309,7 +309,7 @@ func ExtractSubstringFromText(pattern string, text string) (string, error) {
 
 // SyncParsePage 并发sync.WaitGroup，通过chromedp解析页面，获取图片地址，并发量为numWorkers，返回实际获取的图片地址数量(int)
 // localGetImageUrlFromPage为不同软件包的内部函数，用于从页面中获取图片地址
-func SyncParsePage(localGetImageUrlFromPage func(*goquery.Document) []string, imagePageInfoListChannel <-chan map[int]string, imageInfoListChannel *chanx.UnboundedChan[map[string]string],
+func SyncParsePage(localGetImageUrlListFromPage func(*goquery.Document) []string, imagePageInfoListChannel <-chan map[int]string, imageInfoListChannel *chanx.UnboundedChan[map[string]string],
 	cookiesParam []*network.CookieParam, numWorkers int) {
 	var wg sync.WaitGroup
 
@@ -325,13 +325,12 @@ func SyncParsePage(localGetImageUrlFromPage func(*goquery.Document) []string, im
 					//fmt.Println(index, url)
 					pageDoc := client.GetHtmlDoc(cookiesParam, url)
 					//获取图片地址
-					imageUrlList := localGetImageUrlFromPage(pageDoc)
-					//FIXME:或许这里应该设置一个临时channel，用于存储该页面的imageInfo,在函数的最后再遍历所有临时channel并把数据写入此时已经确定实际大小的imageInfoChannel
+					imageUrlList := localGetImageUrlListFromPage(pageDoc)
 					for i, imageUrl := range imageUrlList {
 						imageSuffix := imageUrl[strings.LastIndex(imageUrl, "."):]
 						imageInfo := map[string]string{
-							"imageName": cast.ToString(index) + "_" + cast.ToString(i) + imageSuffix,
-							"imageUrl":  imageUrl,
+							"imageTitle": cast.ToString(index) + "_" + cast.ToString(i) + imageSuffix,
+							"imageUrl":   imageUrl,
 						}
 						imageInfoListChannel.In <- imageInfo
 					}

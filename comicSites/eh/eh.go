@@ -153,8 +153,8 @@ func getImageInfoFromPage(c *colly.Collector, imagePageUrl string) (string, stri
 	imageIndex := imagePageUrl[strings.LastIndex(imagePageUrl, "-")+1:]
 	imageUrl := getImageUrl(c, imagePageUrl)
 	imageSuffix := imageUrl[strings.LastIndex(imageUrl, "."):]
-	imageName := fmt.Sprintf("%s%s", imageIndex, imageSuffix)
-	return imageName, imageUrl
+	imageTitle := fmt.Sprintf("%s%s", imageIndex, imageSuffix)
+	return imageTitle, imageUrl
 }
 
 func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
@@ -215,10 +215,10 @@ func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
 		var imageInfoList []map[string]string
 		//根据imagePageUrls获取imageDataList
 		for _, imagePageUrl := range imagePageUrls {
-			imageName, imageUrl := getImageInfoFromPage(collector, imagePageUrl)
+			imageTitle, imageUrl := getImageInfoFromPage(collector, imagePageUrl)
 			imageInfoList = append(imageInfoList, map[string]string{
-				"imageName": imageName,
-				"imageUrl":  imageUrl,
+				"imageTitle": imageTitle,
+				"imageUrl":   imageUrl,
 			})
 		}
 		//防止被ban，每处理一篇目录就sleep 5-10 seconds
