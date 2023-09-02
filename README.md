@@ -1,5 +1,5 @@
 ## 支持站点
-目前支持`e-hentai.org`,`manhua.dmzj.com`(需要将cookies放在同级目录下的dmzi_cookies.json，可以通过EditThisCookie导出，注意调整翻页模式，使其中的fanyemodeval=2)
+目前支持`e-hentai.org`,`mmmlf.com`,`manhua.dmzj.com`(需要将cookies放在同级目录下的dmzj_cookies.json，可以通过EditThisCookie导出，注意调整翻页模式，使其中的fanyemodeval=2)
 ## TODO
 1. dmzj目录带分页的情况无法处理（或许应该使用chromedp模拟点击处理，不过这种情况比较少，暂时懒得改了:)）
 ## 缓存文件格式
