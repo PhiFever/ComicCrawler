@@ -73,7 +73,10 @@ func getImageUrlListFromPage(c *colly.Collector, url string) []string {
 		e.ForEach("div.comicpage", func(_ int, div *colly.HTMLElement) {
 			//获取每个 <img> 的src属性
 			src := div.ChildAttr("img", "src")
-			imageUrlList = append(imageUrlList, src)
+			//有时候会有奇怪的失效链接，需要去除
+			if !strings.Contains(src, "https://mirror.mangafunc.fun/comic/") {
+				imageUrlList = append(imageUrlList, src)
+			}
 		})
 	})
 	err := c.Visit(url)
@@ -85,7 +88,8 @@ func getImagePageInfoList(c *colly.Collector, url string) (imagePageInfoList []m
 	//找到 <ul class="chapter-list clearfix" id="chapterList">
 	c.OnHTML("ul#chapterList", func(e *colly.HTMLElement) {
 		//对每个<li>标签进行处理
-		index := 1
+		//FIXME:此处可能需要根据实际目录情况变动，因为有时候是从第1话开始有时候是第0话开始
+		index := 0
 		e.ForEach("li", func(_ int, li *colly.HTMLElement) {
 			//<a>标签的href属性即为图片页面的url
 			imagePageUrl := li.ChildAttr("a", "href")
@@ -140,21 +144,23 @@ func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
 	imagePageUrlList, indexToTitleMapList := getImagePageInfoList(jpegCollector, galleryUrl)
 	//FIXME:为什么要减1？因为beginIndex是从0开始的，而imagePageUrlList的index是从1开始的
 	//所以当beginIndex=0时程序会报错
-	if beginIndex != 0 {
-		imagePageUrlList = imagePageUrlList[beginIndex-1:]
-	}
+	//if beginIndex != 0 {
+	//	imagePageUrlList = imagePageUrlList[beginIndex-1:]
+	//}
+	imagePageUrlList = imagePageUrlList[beginIndex:]
+
 	err := utils.BuildCache(safeTitle, "menu.json", indexToTitleMapList)
 	utils.ErrorCheck(err)
 
 	//对每话的页面进行处理
-	for _, imagePage := range imagePageUrlList {
+	for _, imagePageUrl := range imagePageUrlList {
 		var imageInfoList []map[string]string
-		for index, pageUrl := range imagePage {
+		for key, pageUrl := range imagePageUrl {
 			imageUrlList := getImageUrlListFromPage(baseCollector, pageUrl)
 			for i, imageUrl := range imageUrlList {
 				imageSuffix := imageUrl[strings.LastIndex(imageUrl, "."):]
 				imageInfo := map[string]string{
-					"imageTitle": cast.ToString(index) + "_" + cast.ToString(i) + imageSuffix,
+					"imageTitle": cast.ToString(key) + "_" + cast.ToString(i) + imageSuffix,
 					"imageUrl":   imageUrl,
 				}
 				imageInfoList = append(imageInfoList, imageInfo)

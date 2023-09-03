@@ -49,6 +49,8 @@ func InitJPEGCollector(headers http.Header) *colly.Collector {
 	c.OnError(func(r *colly.Response, err error) {
 		fmt.Println("Request URL:", r.Request.URL, "failed with response:", r, "\nError:", err)
 
+		//TODO:如果是“远程主机强迫关闭了一个现有的连接”才进行重试
+
 		// 检查是否达到最大重试次数
 		if retryCount < maxRetries {
 			retryCount++
