@@ -260,14 +260,14 @@ func ReadListFile(filePath string) ([]string, error) {
 }
 
 // SaveImages 保存imageInfoList中的所有图片，imageInfoMap中的每个元素都是一个map，包含两个键值对，imageTitle:title和imageUrl:url
-func SaveImages(baseCollector *colly.Collector, imageInfoList []map[string]string, saveDir string) error {
+func SaveImages(JPEGCollector *colly.Collector, imageInfoList []map[string]string, saveDir string) error {
 	dir, err := filepath.Abs(saveDir)
 	err = os.MkdirAll(dir, os.ModePerm)
 	ErrorCheck(err)
 
 	var imageContent []byte
 
-	baseCollector.OnResponse(func(r *colly.Response) {
+	JPEGCollector.OnResponse(func(r *colly.Response) {
 		imageContent = r.Body
 	})
 
@@ -276,7 +276,7 @@ func SaveImages(baseCollector *colly.Collector, imageInfoList []map[string]strin
 		imageUrl := data["imageUrl"]
 		filePath, err := filepath.Abs(filepath.Join(dir, imageTitle))
 		ErrorCheck(err)
-		err = baseCollector.Request("GET", imageUrl, nil, nil, nil)
+		err = JPEGCollector.Request("GET", imageUrl, nil, nil, nil)
 		ErrorCheck(err)
 		//增加延时，防止被ban
 		time.Sleep(time.Millisecond * time.Duration(DelayMs))

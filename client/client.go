@@ -19,15 +19,10 @@ import (
 const DEBUG_MODE = false
 
 func InitJPEGCollector(headers http.Header) *colly.Collector {
-	c := colly.NewCollector(
-	//表示异步抓取
-	//colly.Async(true),
-	//允许重复访问
-	//colly.AllowURLRevisit(),
-	)
+	c := colly.NewCollector()
+	//TODO: 限制规则似乎不起效果，需要进一步研究
 	//限制采集规格
 	rule := &colly.LimitRule{
-		//TODO: 限制规则似乎不起效果，需要进一步研究
 		//理论上来说每次请求前会有访问延迟，但是实际使用的时候感觉不出来，不知道为什么
 		RandomDelay: 5 * time.Second,
 		Parallelism: 5, //并发数
@@ -143,6 +138,7 @@ func ConvertCookies(cookies []Cookie) []*network.CookieParam {
 }
 
 // GetRenderedPage 获取经过JavaScript渲染后的页面
+// TODO:在实际应用中连续爬取多个网页不需要每次都重新创建chromeCtx，这个函数需要进一步优化
 func GetRenderedPage(url string, cookieParams []*network.CookieParam) ([]byte, error) {
 	log.Println("正在渲染页面:", url)
 	options := append(chromedp.DefaultExecAllocatorOptions[:],
@@ -150,6 +146,7 @@ func GetRenderedPage(url string, cookieParams []*network.CookieParam) ([]byte, e
 		chromedp.Flag("disable-gpu", true),     // 禁用GPU
 		chromedp.Flag("no-sandbox", true),      // 禁用沙盒模式
 		chromedp.Flag("–disable-plugins", true),
+		chromedp.Flag("blink-settings", "imagesEnabled=false"), // 禁用图片加载
 		chromedp.UserAgent(`Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36`),
 	)
 	allocCtx, cancel := chromedp.NewExecAllocator(context.Background(), options...)
