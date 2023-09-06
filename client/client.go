@@ -137,35 +137,37 @@ func ConvertCookies(cookies []Cookie) []*network.CookieParam {
 	return cookieParams
 }
 
-// GetRenderedPage 获取经过JavaScript渲染后的页面
-// TODO:在实际应用中连续爬取多个网页不需要每次都重新创建chromeCtx，这个函数需要进一步优化
-func GetRenderedPage(url string, cookieParams []*network.CookieParam) ([]byte, error) {
-	log.Println("正在渲染页面:", url)
+func InitializeChromedpContext() (context.Context, context.CancelFunc) {
+	log.Println("正在初始化 Chromedp 上下文")
 	options := append(chromedp.DefaultExecAllocatorOptions[:],
-		chromedp.Flag("headless", !DEBUG_MODE), // 是否以无头模式运行
-		chromedp.Flag("disable-gpu", true),     // 禁用GPU
-		chromedp.Flag("no-sandbox", true),      // 禁用沙盒模式
+		chromedp.Flag("headless", !DEBUG_MODE),
+		chromedp.Flag("disable-gpu", true),
+		chromedp.Flag("no-sandbox", true),
 		chromedp.Flag("–disable-plugins", true),
-		chromedp.Flag("blink-settings", "imagesEnabled=false"), // 禁用图片加载
+		chromedp.Flag("blink-settings", "imagesEnabled=false"),
 		chromedp.UserAgent(`Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36`),
 	)
 	allocCtx, cancel := chromedp.NewExecAllocator(context.Background(), options...)
-	defer cancel()
 
 	chromeCtx, cancel := chromedp.NewContext(allocCtx, chromedp.WithLogf(log.Printf))
-	defer cancel()
+	return chromeCtx, cancel
+}
 
-	// 超时时间为30秒
-	timeoutCtx, cancel := context.WithTimeout(chromeCtx, 30*time.Second)
-	defer cancel()
+// GetRenderedPage 获取经过JavaScript渲染后的页面
+// TODO:在实际应用中连续爬取多个网页不需要每次都重新创建chromeCtx，这个函数需要进一步优化
+func GetRenderedPage(ctx context.Context, url string, cookieParams []*network.CookieParam) ([]byte, error) {
+	log.Println("正在渲染页面:", url)
+
+	//这个超时时间似乎是整个chromedp实例的超时时间，而不是单个url请求的超时时间，所以暂时不使用
+	//// 超时时间为30秒
+	//timeoutCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	//defer cancel()
 
 	var htmlContent string
-	err := chromedp.Run(timeoutCtx,
+	//err := chromedp.Run(timeoutCtx,
+	err := chromedp.Run(ctx,
 		network.SetCookies(cookieParams),
-		chromedp.Navigate(url), // 替换为你想要访问的网址
-		// 等待<div class="anim-main_list">(即selector节点)加载完毕（感觉不好用）
-		//chromedp.WaitVisible("div.anim-main_list", chromedp.ByQuery),
-		// 等待5秒，保证页面加载完毕
+		chromedp.Navigate(url),
 		chromedp.Sleep(5*time.Second),
 		chromedp.OuterHTML("html", &htmlContent),
 	)
@@ -177,9 +179,9 @@ func GetRenderedPage(url string, cookieParams []*network.CookieParam) ([]byte, e
 }
 
 // GetHtmlDoc 读取cookies文件，获取经过JavaScript渲染后的页面
-func GetHtmlDoc(cookiesParam []*network.CookieParam, galleryUrl string) *goquery.Document {
+func GetHtmlDoc(ctx context.Context, cookiesParam []*network.CookieParam, galleryUrl string) *goquery.Document {
 	//实际使用时的代码
-	htmlContent, err := GetRenderedPage(galleryUrl, cookiesParam)
+	htmlContent, err := GetRenderedPage(ctx, galleryUrl, cookiesParam)
 	// 将 []byte 转换为 io.Reader
 	reader := bytes.NewReader(htmlContent)
 	doc, err := goquery.NewDocumentFromReader(reader)

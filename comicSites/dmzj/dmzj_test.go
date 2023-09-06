@@ -19,6 +19,9 @@ var (
 )
 
 func Test_getGalleryInfo(t *testing.T) {
+	// 初始化 Chromedp 上下文
+	ctx, cancel := client.InitializeChromedpContext()
+	defer cancel()
 	tests := []struct {
 		name       string
 		galleryUrl string
@@ -45,7 +48,7 @@ func Test_getGalleryInfo(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			menuDoc := client.GetHtmlDoc(cookiesParam, tt.galleryUrl)
+			menuDoc := client.GetHtmlDoc(ctx, cookiesParam, tt.galleryUrl)
 			got := getGalleryInfo(menuDoc, tt.galleryUrl)
 			//fmt.Println(got)
 			if !reflect.DeepEqual(got, tt.want) {
@@ -76,6 +79,9 @@ func Test_getGalleryInfo(t *testing.T) {
 }
 
 func Test_getImagePageInfoListBySelector(t *testing.T) {
+	// 初始化 Chromedp 上下文
+	ctx, cancel := client.InitializeChromedpContext()
+	defer cancel()
 	type args struct {
 		selector string
 		doc      *goquery.Document
@@ -90,7 +96,7 @@ func Test_getImagePageInfoListBySelector(t *testing.T) {
 			name: "无其他页",
 			args: args{
 				selector: "div.cartoon_online_border_other",
-				doc:      client.GetHtmlDoc(cookiesParam, "https://manhua.dmzj.com/xianxiashouweiqiang/"),
+				doc:      client.GetHtmlDoc(ctx, cookiesParam, "https://manhua.dmzj.com/xianxiashouweiqiang/"),
 			},
 			wantImageOtherPageInfoList: []map[int]string{},
 			wantIndexToNameMap:         []map[int]string{},
@@ -99,7 +105,7 @@ func Test_getImagePageInfoListBySelector(t *testing.T) {
 			name: "有其他页",
 			args: args{
 				selector: "div.cartoon_online_border_other",
-				doc:      client.GetHtmlDoc(cookiesParam, "https://manhua.dmzj.com/rangwoxinshendangyangdehuainvren/"),
+				doc:      client.GetHtmlDoc(ctx, cookiesParam, "https://manhua.dmzj.com/rangwoxinshendangyangdehuainvren/"),
 			},
 			wantImageOtherPageInfoList: []map[int]string{
 				{1: "https://manhua.dmzj.com/rangwoxinshendangyangdehuainvren/118153.shtml#1"},
@@ -122,7 +128,7 @@ func Test_getImagePageInfoListBySelector(t *testing.T) {
 			name: "主页",
 			args: args{
 				selector: "div.cartoon_online_border",
-				doc:      client.GetHtmlDoc(cookiesParam, "https://manhua.dmzj.com/xianxiashouweiqiang/"),
+				doc:      client.GetHtmlDoc(ctx, cookiesParam, "https://manhua.dmzj.com/xianxiashouweiqiang/"),
 			},
 			wantImageOtherPageInfoList: []map[int]string{
 				{1: "https://manhua.dmzj.com/xianxiashouweiqiang/96289.shtml#1"},
@@ -171,6 +177,9 @@ func Test_getImagePageInfoListBySelector(t *testing.T) {
 }
 
 func Test_getImageUrlListFromPage(t *testing.T) {
+	// 初始化 Chromedp 上下文
+	ctx, cancel := client.InitializeChromedpContext()
+	defer cancel()
 	type args struct {
 		doc *goquery.Document
 	}
@@ -182,7 +191,7 @@ func Test_getImageUrlListFromPage(t *testing.T) {
 		{
 			name: "先下手为强 03话",
 			args: args{
-				doc: client.GetHtmlDoc(cookiesParam, "https://manhua.dmzj.com/xianxiashouweiqiang/97810.shtml#1"),
+				doc: client.GetHtmlDoc(ctx, cookiesParam, "https://manhua.dmzj.com/xianxiashouweiqiang/97810.shtml#1"),
 			},
 			want: []string{
 				`https://images.idmzj.com/x%2F%E5%85%88%E4%B8%8B%E6%89%8B%E4%B8%BA%E5%BC%BA%2F%E7%AC%AC03%E8%AF%9D_1578815283%2F73404787_p0_master1200.jpg`,
@@ -195,7 +204,7 @@ func Test_getImageUrlListFromPage(t *testing.T) {
 		{
 			name: "FS社主人公in艾尔登法环 01话",
 			args: args{
-				doc: client.GetHtmlDoc(cookiesParam, "https://manhua.dmzj.com/fsshezhurengonginaierdengfahuan/128361.shtml#1"),
+				doc: client.GetHtmlDoc(ctx, cookiesParam, "https://manhua.dmzj.com/fsshezhurengonginaierdengfahuan/128361.shtml#1"),
 			},
 			want: []string{
 				`https://images.idmzj.com/f%2FFS%E7%A4%BE%E4%B8%BB%E4%BA%BA%E5%85%ACin%E8%89%BE%E5%B0%94%E7%99%BB%E6%B3%95%E7%8E%AF%2F01%2F01.jpg`,

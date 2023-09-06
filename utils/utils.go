@@ -312,6 +312,9 @@ func ExtractSubstringFromText(pattern string, text string) (string, error) {
 func SyncParsePage(localGetImageUrlListFromPage func(*goquery.Document) []string, imagePageInfoListChannel <-chan map[int]string, imageInfoListChannel *chanx.UnboundedChan[map[string]string],
 	cookiesParam []*network.CookieParam, numWorkers int) {
 	var wg sync.WaitGroup
+	// 初始化 Chromedp 上下文
+	ctx, cancel := client.InitializeChromedpContext()
+	defer cancel()
 
 	//WaitGroup 使用计数器来工作。当创建 WaitGroup 时，其计数器初始值为 0
 	//当调用 Add 方法时，计数器增加 1，当调用 Done 方法时，计数器减少 1。当调用 Wait 方法时，goroutine 将会阻塞，直至计数器数值为 0。
@@ -323,7 +326,7 @@ func SyncParsePage(localGetImageUrlListFromPage func(*goquery.Document) []string
 			for info := range imagePageInfoListChannel {
 				for index, url := range info {
 					//fmt.Println(index, url)
-					pageDoc := client.GetHtmlDoc(cookiesParam, url)
+					pageDoc := client.GetHtmlDoc(ctx, cookiesParam, url)
 					//获取图片地址
 					imageUrlList := localGetImageUrlListFromPage(pageDoc)
 					for i, imageUrl := range imageUrlList {
