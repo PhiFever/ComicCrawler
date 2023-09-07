@@ -10,6 +10,7 @@ import (
 	"github.com/fatih/color"
 	"log"
 	"os"
+	"path/filepath"
 	"regexp"
 	"time"
 )
@@ -20,16 +21,22 @@ var (
 	galleryUrl string
 	onlyInfo   bool
 	listFile   string
+	update     bool
 	buildTime  string
 	goVersion  string
 	version    = "v1.0.0"
 )
 
+type GalleryInfo struct {
+	URL   string `json:"gallery_url"`
+	Title string `json:"gallery_title"`
+}
+
 type GalleryDownloader struct{}
 
 func (gd GalleryDownloader) Download(infoJson string, url string, onlyInfo bool) error {
 	// 根据正则表达式判断是哪个软件包的gallery，并调用相应的下载函数
-	if matched, _ := regexp.MatchString(`^https://e-hentai.org/g/[a-z0-9]{7}/[a-z0-9]{10}/$`, url); matched {
+	if matched, _ := regexp.MatchString(`^https://e-hentai.org/g/[a-z0-9]*/[a-z0-9]{10}/$`, url); matched {
 		//fmt.Println("调用eh包的DownloadGallery函数")
 		eh.DownloadGallery(infoJson, url, onlyInfo)
 	} else if matched, _ := regexp.MatchString(`^https://manhua.dmzj.com/[a-z0-9]*/$`, url); matched {
@@ -44,6 +51,44 @@ func (gd GalleryDownloader) Download(infoJson string, url string, onlyInfo bool)
 	return nil
 }
 
+func getDownLoadedGalleryUrl() []string {
+	galleryInfo := GalleryInfo{}
+	// 将下载过的画廊地址添加到列表中
+	var downloadedGalleryUrlList []string
+
+	currentDir, err := os.Getwd()
+	if err != nil {
+		log.Println("获取当前目录时出错：", err)
+		return downloadedGalleryUrlList
+	}
+
+	// 递归遍历目录
+	err = filepath.Walk(currentDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			log.Println("获取当前目录时出错：", err)
+			return err
+		}
+
+		// 检查是否是文件夹并且文件名是 galleryInfo.json
+		if !info.IsDir() && info.Name() == "galleryInfo.json" {
+			// 解析 JSON 数据
+			err = utils.LoadCache(path, &galleryInfo)
+			if err != nil {
+				return err
+			}
+
+			downloadedGalleryUrlList = append(downloadedGalleryUrlList, galleryInfo.URL)
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		fmt.Println("遍历目录时出错：", err)
+	}
+	return downloadedGalleryUrlList
+}
+
 func initArgsParse() {
 	flag.StringVar(&galleryUrl, "url", "", "待下载的画廊地址（必填）")
 	flag.StringVar(&galleryUrl, "u", "", "待下载的画廊地址（必填）")
@@ -51,11 +96,13 @@ func initArgsParse() {
 	flag.BoolVar(&onlyInfo, "i", false, "只获取画廊信息(true/false)，默认为false")
 	flag.StringVar(&listFile, "list", "", "待下载的画廊地址列表文件，每行一个url。(不能与参数-url同时使用)")
 	flag.StringVar(&listFile, "l", "", "待下载的画廊地址列表文件，每行一个url。(不能与参数-url同时使用)")
+	flag.BoolVar(&update, "update", false, "更新全部以下载漫画，不能与其他任何参数一起使用")
 }
 
 func main() {
 	//版本信息
 	args := os.Args
+	//--version 或 -v
 	if len(args) == 2 && (args[1] == "--version" || args[1] == "-v") {
 		fmt.Printf("Version: %s \n", version)
 		fmt.Printf("Build TimeStamp: %s \n", buildTime)
@@ -63,12 +110,14 @@ func main() {
 		os.Exit(0)
 	}
 
+	var galleryUrlList []string
+	//解析flag参数
 	initArgsParse()
 	flag.Parse()
 
-	var galleryUrlList []string
-
 	switch {
+	case update:
+		galleryUrlList = getDownLoadedGalleryUrl()
 	case galleryUrl == "" && listFile == "":
 		fmt.Println("本程序为命令行程序，请在命令行中运行参数-h以查看帮助")
 		os.Exit(-1)

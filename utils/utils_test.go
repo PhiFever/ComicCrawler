@@ -252,49 +252,6 @@ func TestExtractNumberFromText(t *testing.T) {
 	}
 }
 
-func TestSortMapsByIntKey(t *testing.T) {
-	type args struct {
-		ascending bool
-	}
-	tests := []struct {
-		name string
-		args args
-		want []map[int]string
-	}{
-		{
-			name: "ascending",
-			args: args{
-				ascending: true,
-			},
-			want: []map[int]string{
-				{0: "orange"}, {1: "apple"}, {3: "banana"}, {5: "pear"},
-			},
-		},
-		{
-			name: "descending",
-			args: args{
-				ascending: false,
-			},
-			want: []map[int]string{
-				{5: "pear"}, {3: "banana"}, {1: "apple"}, {0: "orange"},
-			},
-		},
-	}
-	inputMap := []map[int]string{
-		{3: "banana"},
-		{1: "apple"},
-		{5: "pear"},
-		{0: "orange"},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := SortListByMapsIntKey(inputMap, tt.args.ascending); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("SortListByMapsIntKey() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
 func TestCheckUpdate(t *testing.T) {
 	type args struct {
 		lastUpdateTime string

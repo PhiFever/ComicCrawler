@@ -14,7 +14,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -54,25 +53,6 @@ func MinInt(x, y int) int {
 		return x
 	}
 	return y
-}
-
-// SortListByMapsIntKey 用于按照map中的int键值对进行排序
-func SortListByMapsIntKey(maps []map[int]string, ascending bool) []map[int]string {
-	getKey := func(m map[int]string) int {
-		for key := range m {
-			return key
-		}
-		return 0
-	}
-	sort.Slice(maps, func(i, j int) bool {
-		keyI := getKey(maps[i])
-		keyJ := getKey(maps[j])
-		if ascending {
-			return keyI < keyJ
-		}
-		return keyI > keyJ
-	})
-	return maps
 }
 
 // SaveFile 用于保存文件
