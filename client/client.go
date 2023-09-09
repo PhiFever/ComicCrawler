@@ -154,7 +154,6 @@ func InitializeChromedpContext() (context.Context, context.CancelFunc) {
 }
 
 // GetRenderedPage 获取经过JavaScript渲染后的页面
-// TODO:在实际应用中连续爬取多个网页不需要每次都重新创建chromeCtx，这个函数需要进一步优化
 func GetRenderedPage(ctx context.Context, url string, cookieParams []*network.CookieParam) ([]byte, error) {
 	log.Println("正在渲染页面:", url)
 
@@ -164,17 +163,32 @@ func GetRenderedPage(ctx context.Context, url string, cookieParams []*network.Co
 	//defer cancel()
 
 	var htmlContent string
-	//err := chromedp.Run(timeoutCtx,
-	err := chromedp.Run(ctx,
+	// 具体任务放在这里
+	var tasks = chromedp.Tasks{
+		chromedp.Navigate("https://example.com"),
 		network.SetCookies(cookieParams),
 		chromedp.Navigate(url),
-		chromedp.Sleep(5*time.Second),
+		chromedp.ActionFunc(func(ctx context.Context) error {
+			// 在这里打印信息到控制台
+			fmt.Println("sleeping...")
+			return nil
+		}),
+		chromedp.Sleep(5 * time.Second),
+		chromedp.ActionFunc(func(ctx context.Context) error {
+			// 在这里打印信息到控制台
+			fmt.Println("sleeping over")
+			return nil
+		}),
 		chromedp.OuterHTML("html", &htmlContent),
-	)
-	log.Println("渲染完毕", url)
+	}
+
+	//开始执行任务
+	//err := chromedp.Run(timeoutCtx,
+	err := chromedp.Run(ctx, tasks)
 	if err != nil {
 		log.Fatal(err)
 	}
+	log.Println("渲染完毕", url)
 	return []byte(htmlContent), nil
 }
 

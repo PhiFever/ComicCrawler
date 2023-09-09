@@ -78,6 +78,7 @@ func getDownLoadedGalleryUrl() []string {
 			}
 
 			downloadedGalleryUrlList = append(downloadedGalleryUrlList, galleryInfo.URL)
+			//log.Println(galleryInfo)
 		}
 
 		return nil
