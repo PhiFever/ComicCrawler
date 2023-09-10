@@ -21,10 +21,6 @@ import (
 	"time"
 )
 
-const (
-	DelayMs = 330
-)
-
 func ErrorCheck(err error) {
 	if err != nil {
 		log.Fatal(err)
@@ -260,7 +256,7 @@ func SaveImages(JPEGCollector *colly.Collector, imageInfoList []map[string]strin
 		err = JPEGCollector.Request("GET", imageUrl, nil, nil, nil)
 		ErrorCheck(err)
 		//增加延时，防止被ban
-		time.Sleep(time.Millisecond * time.Duration(DelayMs))
+		time.Sleep(time.Millisecond * time.Duration(client.DelayMs))
 		err = SaveFile(filePath, imageContent)
 		if err != nil {
 			fmt.Println("Error saving image:", err)

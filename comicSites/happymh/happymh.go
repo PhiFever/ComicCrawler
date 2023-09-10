@@ -10,12 +10,10 @@ import (
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
 	"github.com/chromedp/cdproto/network"
-	"github.com/chromedp/chromedp"
 	"log"
 	"net/http"
 	"path/filepath"
 	"strings"
-	"time"
 )
 
 const (
@@ -26,28 +24,6 @@ type GalleryInfo struct {
 	URL    string `json:"gallery_url"`
 	Title  string `json:"gallery_title"`
 	Author string `json:"author"`
-}
-
-func GetScrolledPage(ctx context.Context, url string, cookieParams []*network.CookieParam, scrollSelector string) ([]byte, error) {
-	log.Println("正在渲染页面:", url)
-
-	var htmlContent string
-	// 具体任务放在这里
-	var tasks = chromedp.Tasks{
-		network.SetCookies(cookieParams),
-		chromedp.Navigate(url),
-		chromedp.ScrollIntoView(scrollSelector),
-		chromedp.Sleep(5 * time.Second),
-		chromedp.OuterHTML("html", &htmlContent),
-	}
-
-	//开始执行任务
-	err := chromedp.Run(ctx, tasks)
-	if err != nil {
-		log.Fatal(err)
-	}
-	log.Println("渲染完毕", url)
-	return []byte(htmlContent), nil
 }
 
 // getGalleryInfo 从主目录页获取画廊信息
@@ -91,7 +67,7 @@ func buildRequestHeaders() http.Header {
 // GetMenuHtmlDoc 读取cookies文件，获取经过JavaScript渲染后的目录页面
 func GetMenuHtmlDoc(ctx context.Context, cookiesParam []*network.CookieParam, galleryUrl string) *goquery.Document {
 	//实际使用时的代码
-	htmlContent, err := client.GetClickedRenderedPage(ctx, "https://m.happymh.com/manga/SWEETHOME", cookiesParam, "#expandButton")
+	htmlContent := client.GetClickedRenderedPage(ctx, galleryUrl, cookiesParam, "#expandButton")
 	// 将 []byte 转换为 io.Reader
 	reader := bytes.NewReader(htmlContent)
 	doc, err := goquery.NewDocumentFromReader(reader)

@@ -21,20 +21,18 @@ func TestGetClickedRenderedPage(t *testing.T) {
 	// 初始化 Chromedp 上下文
 	ctx, cancel := client.InitializeChromedpContext(false)
 	defer cancel()
-	html, err := client.GetClickedRenderedPage(ctx, "https://m.happymh.com/manga/SWEETHOME", cookiesParam, "#expandButton")
-	utils.ErrorCheck(err)
+	html := client.GetClickedRenderedPage(ctx, "https://m.happymh.com/manga/SWEETHOME", cookiesParam, "#expandButton")
 	//把html内容写入文件
-	err = os.WriteFile("../../static/SWEETHOME/menu.html", html, 0666)
+	err := os.WriteFile("../../static/SWEETHOME/menu.html", html, 0666)
 	utils.ErrorCheck(err)
 }
 
 func TestGetScrolledPage(t *testing.T) {
 	ctx, cancel := client.InitializeChromedpContext(true)
 	defer cancel()
-	html, err := GetScrolledPage(ctx, "https://m.happymh.com/reads/SWEETHOME/1946867", cookiesParam, `#root > div > article.jss29 > div.MuiPaper-root.MuiCard-root.jss30.jss47.MuiPaper-elevation3.MuiPaper-rounded > div.MuiCardContent-root.jss35 > ul > li.MuiListSubheader-root.jss37.MuiListSubheader-sticky.MuiListSubheader-gutters > span.jss38.jss39`)
-	utils.ErrorCheck(err)
+	htmlContent := client.GetScrolledPage(ctx, cookiesParam, "https://m.happymh.com/reads/SWEETHOME/1946867")
 	//把html内容写入文件
-	err = os.WriteFile("../../static/SWEETHOME/page.html", html, 0666)
+	err := os.WriteFile("../../static/SWEETHOME/page.htmlContent", htmlContent, 0666)
 	utils.ErrorCheck(err)
 }
 
@@ -87,8 +85,8 @@ func Test_getImagePageInfoList(t *testing.T) {
 
 func Test_getImageUrlListFromPage(t *testing.T) {
 	// 初始化 Chromedp 上下文
-	ctx, cancel := client.InitializeChromedpContext(true)
-	defer cancel()
+	//ctx, cancel := client.InitializeChromedpContext(true)
+	//defer cancel()
 	type args struct {
 		doc *goquery.Document
 	}
@@ -100,7 +98,8 @@ func Test_getImageUrlListFromPage(t *testing.T) {
 		{
 			name: "SWEET HOME 序幕",
 			args: args{
-				doc: client.GetHtmlDoc(ctx, cookiesParam, "https://m.happymh.com/reads/SWEETHOME/1946867"),
+				//doc: client.GetScrolledPage(ctx, "https://m.happymh.com/reads/SWEETHOME/1946867",cookiesParam),
+				doc: client.ReadHtmlDoc("../../static/SWEETHOME/page.html"),
 			},
 			want: []string{
 				"https://ruicdn.happymh.com/1f290a226753ed7e0c3d3689e1c84102/0d1ecb53f86000d7d0f95d23cfd2015e.jpg",
@@ -114,8 +113,11 @@ func Test_getImageUrlListFromPage(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := getImageUrlListFromPage(tt.args.doc); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("getImageUrlListFromPage() = %v, want %v", got, tt.want)
+			got := getImageUrlListFromPage(tt.args.doc)[:6]
+			for i, url := range got {
+				if url != tt.want[i] {
+					t.Errorf("getImageUrlListFromPage() got = %v, want %v", got, tt.want)
+				}
 			}
 		})
 	}

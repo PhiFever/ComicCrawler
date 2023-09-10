@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
+	"github.com/chromedp/cdproto/input"
 	"github.com/chromedp/cdproto/network"
 	"github.com/chromedp/chromedp"
 	"github.com/gocolly/colly/v2"
@@ -16,7 +17,10 @@ import (
 	"time"
 )
 
-const DEBUG_MODE = true
+const (
+	DEBUG_MODE = false
+	DelayMs    = 330
+)
 
 func InitJPEGCollector(headers http.Header) *colly.Collector {
 	c := colly.NewCollector()
@@ -137,6 +141,9 @@ func ConvertCookies(cookies []Cookie) []*network.CookieParam {
 	return cookieParams
 }
 
+// InitializeChromedpContext 实际在每次调用时可以派生一个新的超时context，然后在这个新的context中执行任务，可以避免卡住
+// //timeoutCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+// //defer cancel()
 func InitializeChromedpContext(imageEnabled bool) (context.Context, context.CancelFunc) {
 	log.Println("正在初始化 Chromedp 上下文")
 	options := append(chromedp.DefaultExecAllocatorOptions[:],
@@ -154,13 +161,8 @@ func InitializeChromedpContext(imageEnabled bool) (context.Context, context.Canc
 }
 
 // GetRenderedPage 获取经过JavaScript渲染后的页面
-func GetRenderedPage(ctx context.Context, url string, cookieParams []*network.CookieParam) ([]byte, error) {
+func GetRenderedPage(ctx context.Context, url string, cookieParams []*network.CookieParam) []byte {
 	log.Println("正在渲染页面:", url)
-
-	//这个超时时间似乎是整个chromedp实例的超时时间，而不是单个url请求的超时时间，所以暂时不使用
-	//// 超时时间为30秒
-	//timeoutCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
-	//defer cancel()
 
 	var htmlContent string
 	// 具体任务放在这里
@@ -179,11 +181,11 @@ func GetRenderedPage(ctx context.Context, url string, cookieParams []*network.Co
 		log.Fatal(err)
 	}
 	log.Println("渲染完毕", url)
-	return []byte(htmlContent), nil
+	return []byte(htmlContent)
 }
 
-// GetClickedRenderedPage 获取经过JavaScript渲染后需要点击展开的页面
-func GetClickedRenderedPage(ctx context.Context, url string, cookieParams []*network.CookieParam, clickSelector string) ([]byte, error) {
+// GetClickedRenderedPage 获取需要点击展开的经过JavaScript渲染后的页面
+func GetClickedRenderedPage(ctx context.Context, url string, cookieParams []*network.CookieParam, clickSelector string) []byte {
 	log.Println("正在渲染页面:", url)
 
 	var htmlContent string
@@ -202,18 +204,84 @@ func GetClickedRenderedPage(ctx context.Context, url string, cookieParams []*net
 		log.Fatal(err)
 	}
 	log.Println("渲染完毕", url)
-	return []byte(htmlContent), nil
+	return []byte(htmlContent)
+}
+
+// GetScrolledPage 获取需要整个页面滚动到底部后经过JavaScript渲染的页面
+func GetScrolledPage(ctx context.Context, cookieParams []*network.CookieParam, url string) []byte {
+	log.Println("正在渲染页面:", url)
+
+	var height int
+	// 具体任务放在这里
+	var tasks = chromedp.Tasks{
+		network.SetCookies(cookieParams),
+		chromedp.Navigate(url),
+		//获取当前页面的高度
+		chromedp.Evaluate(`document.body.scrollHeight`, &height),
+	}
+	//开始执行任务
+	err := chromedp.Run(ctx, tasks)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	//每次滚动的距离（像素）
+	scollLength := 2000
+	//增加滚轮滚动的任务
+	var Scolltask = chromedp.Tasks{}
+	for i := 0; i < height; i += scollLength {
+		Scolltask = append(Scolltask, chromedp.Sleep(1*time.Second))
+		Scolltask = append(Scolltask, chromedp.ActionFunc(func(ctx context.Context) error {
+			time.Sleep(time.Millisecond * time.Duration(DelayMs))
+			// 在页面的（200，200）坐标的位置
+			p := input.DispatchMouseEvent(input.MouseWheel, 200, 200)
+			p = p.WithDeltaX(0)
+			// 滚轮向下滚动1000单位
+			p = p.WithDeltaY(float64(scollLength))
+			err := p.Do(ctx)
+			return err
+		}))
+	}
+
+	var htmlContent string
+	Scolltask = append(Scolltask, chromedp.OuterHTML("html", &htmlContent))
+
+	fmt.Println(height)
+	//开始执行任务
+	err = chromedp.Run(ctx, Scolltask)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Println("渲染完毕", url)
+	return []byte(htmlContent)
 }
 
 // GetHtmlDoc 读取cookies文件，获取经过JavaScript渲染后的页面
 func GetHtmlDoc(ctx context.Context, cookiesParam []*network.CookieParam, galleryUrl string) *goquery.Document {
 	//实际使用时的代码
-	htmlContent, err := GetRenderedPage(ctx, galleryUrl, cookiesParam)
+	htmlContent := GetRenderedPage(ctx, galleryUrl, cookiesParam)
+	// 将 []byte 转换为 io.Reader
+	doc, err := goquery.NewDocumentFromReader(bytes.NewReader(htmlContent))
 	if err != nil {
 		log.Fatal(err)
 	}
-	// 将 []byte 转换为 io.Reader
-	doc, err := goquery.NewDocumentFromReader(bytes.NewReader(htmlContent))
+	return doc
+}
+
+// ReadHtmlDoc 从文件中读取html内容，返回goquery.Document
+func ReadHtmlDoc(filePath string) *goquery.Document {
+	file, err := os.Open(filePath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer func(file *os.File) {
+		err := file.Close()
+		if err != nil {
+			log.Fatal(err)
+		}
+	}(file)
+
+	doc, err := goquery.NewDocumentFromReader(file)
 	if err != nil {
 		log.Fatal(err)
 	}
