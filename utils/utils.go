@@ -13,6 +13,7 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
@@ -293,7 +294,7 @@ func SyncParsePage(localGetImageUrlListFromPage func(*goquery.Document) []string
 	cookiesParam []*network.CookieParam, numWorkers int) {
 	var wg sync.WaitGroup
 	// 初始化 Chromedp 上下文
-	ctx, cancel := client.InitializeChromedpContext()
+	ctx, cancel := client.InitializeChromedpContext(true)
 	defer cancel()
 
 	//WaitGroup 使用计数器来工作。当创建 WaitGroup 时，其计数器初始值为 0
@@ -347,4 +348,18 @@ func CheckUpdate(lastUpdateTime string, newTime string) bool {
 	} else {
 		return false
 	}
+}
+
+// ElementInSlice 判断slice中是否存在某个item
+func ElementInSlice(value interface{}, array interface{}) bool {
+	switch reflect.TypeOf(array).Kind() {
+	case reflect.Slice:
+		s := reflect.ValueOf(array)
+		for i := 0; i < s.Len(); i++ {
+			if reflect.DeepEqual(value, s.Index(i).Interface()) {
+				return true
+			}
+		}
+	}
+	return false
 }

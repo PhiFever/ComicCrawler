@@ -2,8 +2,8 @@ package dmzj
 
 import (
 	"ComicCrawler/client"
-	"ComicCrawler/stack"
 	"ComicCrawler/utils"
+	"ComicCrawler/utils/stack"
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
 	"github.com/chromedp/cdproto/network"
@@ -194,7 +194,7 @@ func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
 	cookies := client.ReadCookiesFromFile(cookiesPath)
 	cookiesParam := client.ConvertCookies(cookies)
 	// 初始化 Chromedp 上下文
-	ctx, cancel := client.InitializeChromedpContext()
+	ctx, cancel := client.InitializeChromedpContext(false)
 	defer cancel()
 	menuDoc := client.GetHtmlDoc(ctx, cookiesParam, galleryUrl)
 

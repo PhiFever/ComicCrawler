@@ -16,7 +16,7 @@ import (
 	"time"
 )
 
-const DEBUG_MODE = false
+const DEBUG_MODE = true
 
 func InitJPEGCollector(headers http.Header) *colly.Collector {
 	c := colly.NewCollector()
@@ -130,22 +130,22 @@ func ConvertCookies(cookies []Cookie) []*network.CookieParam {
 			Value:    cookie.Value,
 			Domain:   cookie.Domain,
 			Path:     cookie.Path,
-			HTTPOnly: cookie.HTTPOnly,
 			Secure:   cookie.Secure,
+			HTTPOnly: cookie.HTTPOnly,
 		}
 	}
 	return cookieParams
 }
 
-func InitializeChromedpContext() (context.Context, context.CancelFunc) {
+func InitializeChromedpContext(imageEnabled bool) (context.Context, context.CancelFunc) {
 	log.Println("正在初始化 Chromedp 上下文")
 	options := append(chromedp.DefaultExecAllocatorOptions[:],
 		chromedp.Flag("headless", !DEBUG_MODE),
 		chromedp.Flag("disable-gpu", true),
 		chromedp.Flag("no-sandbox", true),
 		chromedp.Flag("–disable-plugins", true),
-		chromedp.Flag("blink-settings", "imagesEnabled=false"),
 		chromedp.UserAgent(`Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36`),
+		chromedp.Flag("blink-settings", "imagesEnabled="+fmt.Sprintf("%t", imageEnabled)),
 	)
 	allocCtx, cancel := chromedp.NewExecAllocator(context.Background(), options...)
 
@@ -165,20 +165,10 @@ func GetRenderedPage(ctx context.Context, url string, cookieParams []*network.Co
 	var htmlContent string
 	// 具体任务放在这里
 	var tasks = chromedp.Tasks{
-		chromedp.Navigate("https://example.com"),
 		network.SetCookies(cookieParams),
 		chromedp.Navigate(url),
-		chromedp.ActionFunc(func(ctx context.Context) error {
-			// 在这里打印信息到控制台
-			fmt.Println("sleeping...")
-			return nil
-		}),
+		//chromedp.WaitVisible("???", chromedp.ByQuery),
 		chromedp.Sleep(5 * time.Second),
-		chromedp.ActionFunc(func(ctx context.Context) error {
-			// 在这里打印信息到控制台
-			fmt.Println("sleeping over")
-			return nil
-		}),
 		chromedp.OuterHTML("html", &htmlContent),
 	}
 
@@ -192,13 +182,38 @@ func GetRenderedPage(ctx context.Context, url string, cookieParams []*network.Co
 	return []byte(htmlContent), nil
 }
 
+// GetClickedRenderedPage 获取经过JavaScript渲染后需要点击展开的页面
+func GetClickedRenderedPage(ctx context.Context, url string, cookieParams []*network.CookieParam, clickSelector string) ([]byte, error) {
+	log.Println("正在渲染页面:", url)
+
+	var htmlContent string
+	// 具体任务放在这里
+	var tasks = chromedp.Tasks{
+		network.SetCookies(cookieParams),
+		chromedp.Navigate(url),
+		chromedp.WaitVisible(clickSelector, chromedp.ByQuery),
+		chromedp.Click(clickSelector, chromedp.ByQuery),
+		chromedp.OuterHTML("html", &htmlContent),
+	}
+
+	//开始执行任务
+	err := chromedp.Run(ctx, tasks)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Println("渲染完毕", url)
+	return []byte(htmlContent), nil
+}
+
 // GetHtmlDoc 读取cookies文件，获取经过JavaScript渲染后的页面
 func GetHtmlDoc(ctx context.Context, cookiesParam []*network.CookieParam, galleryUrl string) *goquery.Document {
 	//实际使用时的代码
 	htmlContent, err := GetRenderedPage(ctx, galleryUrl, cookiesParam)
+	if err != nil {
+		log.Fatal(err)
+	}
 	// 将 []byte 转换为 io.Reader
-	reader := bytes.NewReader(htmlContent)
-	doc, err := goquery.NewDocumentFromReader(reader)
+	doc, err := goquery.NewDocumentFromReader(bytes.NewReader(htmlContent))
 	if err != nil {
 		log.Fatal(err)
 	}

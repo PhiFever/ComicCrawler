@@ -20,7 +20,7 @@ var (
 
 func Test_getGalleryInfo(t *testing.T) {
 	// 初始化 Chromedp 上下文
-	ctx, cancel := client.InitializeChromedpContext()
+	ctx, cancel := client.InitializeChromedpContext(false)
 	defer cancel()
 	tests := []struct {
 		name       string
@@ -80,7 +80,7 @@ func Test_getGalleryInfo(t *testing.T) {
 
 func Test_getImagePageInfoListBySelector(t *testing.T) {
 	// 初始化 Chromedp 上下文
-	ctx, cancel := client.InitializeChromedpContext()
+	ctx, cancel := client.InitializeChromedpContext(false)
 	defer cancel()
 	type args struct {
 		selector string
@@ -178,7 +178,7 @@ func Test_getImagePageInfoListBySelector(t *testing.T) {
 
 func Test_getImageUrlListFromPage(t *testing.T) {
 	// 初始化 Chromedp 上下文
-	ctx, cancel := client.InitializeChromedpContext()
+	ctx, cancel := client.InitializeChromedpContext(false)
 	defer cancel()
 	type args struct {
 		doc *goquery.Document
@@ -289,15 +289,10 @@ func Test_syncParsePage(t *testing.T) {
 				got = append(got, imageInfo)
 			}
 
-			///FIXME
-			//返回的图片地址顺序可能不一致，理论上不应该直接使用reflect.DeepEqual进行比较
-			//但是我懒得写比较函数了，所以就这样吧:(
-			//事实上这个测试多试几次总能通过
-			if !reflect.DeepEqual(got, tt.want) {
-				for index, imageInfo := range got {
-					if !reflect.DeepEqual(imageInfo, tt.want[index]) {
-						t.Errorf("syncParsePage() = %v, want %v", imageInfo, tt.want[index])
-					}
+			for _, imageInfo := range got {
+				//如果got的元素不在want中
+				if !utils.ElementInSlice(imageInfo, tt.want) {
+					t.Errorf("syncParsePage() got = %v,not in want", imageInfo)
 				}
 			}
 		})
