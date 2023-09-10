@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	DEBUG_MODE = false
+	DEBUG_MODE = true
 	DelayMs    = 330
 )
 
@@ -141,10 +141,10 @@ func ConvertCookies(cookies []Cookie) []*network.CookieParam {
 	return cookieParams
 }
 
-// InitializeChromedpContext 实际在每次调用时可以派生一个新的超时context，然后在这个新的context中执行任务，可以避免卡住
+// InitChromedpContext 实际在每次调用时可以派生一个新的超时context，然后在这个新的context中执行任务，可以避免卡住
 // //timeoutCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 // //defer cancel()
-func InitializeChromedpContext(imageEnabled bool) (context.Context, context.CancelFunc) {
+func InitChromedpContext(imageEnabled bool) (context.Context, context.CancelFunc) {
 	log.Println("正在初始化 Chromedp 上下文")
 	options := append(chromedp.DefaultExecAllocatorOptions[:],
 		chromedp.Flag("headless", !DEBUG_MODE),
@@ -256,10 +256,8 @@ func GetScrolledPage(ctx context.Context, cookieParams []*network.CookieParam, u
 	return []byte(htmlContent)
 }
 
-// GetHtmlDoc 读取cookies文件，获取经过JavaScript渲染后的页面
-func GetHtmlDoc(ctx context.Context, cookiesParam []*network.CookieParam, galleryUrl string) *goquery.Document {
-	//实际使用时的代码
-	htmlContent := GetRenderedPage(ctx, galleryUrl, cookiesParam)
+// GetHtmlDoc 从[]byte中读取html内容，返回goquery.Document
+func GetHtmlDoc(htmlContent []byte) *goquery.Document {
 	// 将 []byte 转换为 io.Reader
 	doc, err := goquery.NewDocumentFromReader(bytes.NewReader(htmlContent))
 	if err != nil {

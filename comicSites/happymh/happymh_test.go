@@ -19,7 +19,7 @@ var (
 
 func TestGetClickedRenderedPage(t *testing.T) {
 	// 初始化 Chromedp 上下文
-	ctx, cancel := client.InitializeChromedpContext(false)
+	ctx, cancel := client.InitChromedpContext(false)
 	defer cancel()
 	html := client.GetClickedRenderedPage(ctx, "https://m.happymh.com/manga/SWEETHOME", cookiesParam, "#expandButton")
 	//把html内容写入文件
@@ -28,7 +28,7 @@ func TestGetClickedRenderedPage(t *testing.T) {
 }
 
 func TestGetScrolledPage(t *testing.T) {
-	ctx, cancel := client.InitializeChromedpContext(true)
+	ctx, cancel := client.InitChromedpContext(true)
 	defer cancel()
 	htmlContent := client.GetScrolledPage(ctx, cookiesParam, "https://m.happymh.com/reads/SWEETHOME/1946867")
 	//把html内容写入文件
@@ -38,7 +38,7 @@ func TestGetScrolledPage(t *testing.T) {
 
 func Test_getImagePageInfoList(t *testing.T) {
 	// 初始化 Chromedp 上下文
-	ctx, cancel := client.InitializeChromedpContext(false)
+	ctx, cancel := client.InitChromedpContext(false)
 	defer cancel()
 	type args struct {
 		doc *goquery.Document
@@ -52,7 +52,8 @@ func Test_getImagePageInfoList(t *testing.T) {
 		{
 			name: "SWEET HOME",
 			args: args{
-				doc: GetMenuHtmlDoc(ctx, cookiesParam, "https://m.happymh.com/manga/SWEETHOME"),
+				//doc: client.ReadHtmlDoc("../../static/SWEETHOME/menu.html"),
+				doc: client.GetHtmlDoc(client.GetClickedRenderedPage(ctx, "https://m.happymh.com/reads/SWEETHOME/", cookiesParam, "#expandButton")),
 			},
 			wantImagePageInfoList: []map[int]string{
 				{0: "https://m.happymh.com/reads/SWEETHOME/1946867"},
@@ -85,8 +86,8 @@ func Test_getImagePageInfoList(t *testing.T) {
 
 func Test_getImageUrlListFromPage(t *testing.T) {
 	// 初始化 Chromedp 上下文
-	//ctx, cancel := client.InitializeChromedpContext(true)
-	//defer cancel()
+	ctx, cancel := client.InitChromedpContext(true)
+	defer cancel()
 	type args struct {
 		doc *goquery.Document
 	}
@@ -98,8 +99,8 @@ func Test_getImageUrlListFromPage(t *testing.T) {
 		{
 			name: "SWEET HOME 序幕",
 			args: args{
-				//doc: client.GetScrolledPage(ctx, "https://m.happymh.com/reads/SWEETHOME/1946867",cookiesParam),
-				doc: client.ReadHtmlDoc("../../static/SWEETHOME/page.html"),
+				doc: client.GetHtmlDoc(client.GetScrolledPage(ctx, cookiesParam, "https://m.happymh.com/reads/SWEETHOME/1946867")),
+				//doc: client.ReadHtmlDoc("../../static/SWEETHOME/page.html"),
 			},
 			want: []string{
 				"https://ruicdn.happymh.com/1f290a226753ed7e0c3d3689e1c84102/0d1ecb53f86000d7d0f95d23cfd2015e.jpg",

@@ -290,7 +290,7 @@ func SyncParsePage(localGetImageUrlListFromPage func(*goquery.Document) []string
 	cookiesParam []*network.CookieParam, numWorkers int) {
 	var wg sync.WaitGroup
 	// 初始化 Chromedp 上下文
-	ctx, cancel := client.InitializeChromedpContext(true)
+	ctx, cancel := client.InitChromedpContext(true)
 	defer cancel()
 
 	//WaitGroup 使用计数器来工作。当创建 WaitGroup 时，其计数器初始值为 0
@@ -303,7 +303,7 @@ func SyncParsePage(localGetImageUrlListFromPage func(*goquery.Document) []string
 			for info := range imagePageInfoListChannel {
 				for index, url := range info {
 					//fmt.Println(index, url)
-					pageDoc := client.GetHtmlDoc(ctx, cookiesParam, url)
+					pageDoc := client.GetHtmlDoc(client.GetRenderedPage(ctx, url, cookiesParam))
 					//获取图片地址
 					imageUrlList := localGetImageUrlListFromPage(pageDoc)
 					for i, imageUrl := range imageUrlList {

@@ -5,12 +5,8 @@ import (
 	"ComicCrawler/client"
 	"ComicCrawler/utils"
 	"ComicCrawler/utils/stack"
-	"bytes"
-	"context"
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
-	"github.com/chromedp/cdproto/network"
-	"log"
 	"net/http"
 	"path/filepath"
 	"strings"
@@ -64,18 +60,18 @@ func buildRequestHeaders() http.Header {
 	return headers
 }
 
-// GetMenuHtmlDoc 读取cookies文件，获取经过JavaScript渲染后的目录页面
-func GetMenuHtmlDoc(ctx context.Context, cookiesParam []*network.CookieParam, galleryUrl string) *goquery.Document {
-	//实际使用时的代码
-	htmlContent := client.GetClickedRenderedPage(ctx, galleryUrl, cookiesParam, "#expandButton")
-	// 将 []byte 转换为 io.Reader
-	reader := bytes.NewReader(htmlContent)
-	doc, err := goquery.NewDocumentFromReader(reader)
-	if err != nil {
-		log.Fatal(err)
-	}
-	return doc
-}
+//// GetMenuHtmlDoc 读取cookies文件，获取经过JavaScript渲染后的目录页面
+//func GetMenuHtmlDoc(ctx context.Context, cookiesParam []*network.CookieParam, galleryUrl string) *goquery.Document {
+//	//实际使用时的代码
+//	htmlContent := client.GetClickedRenderedPage(ctx, galleryUrl, cookiesParam, "#expandButton")
+//	// 将 []byte 转换为 io.Reader
+//	reader := bytes.NewReader(htmlContent)
+//	doc, err := goquery.NewDocumentFromReader(reader)
+//	if err != nil {
+//		log.Fatal(err)
+//	}
+//	return doc
+//}
 
 // getImageUrlListFromPage 从单个图片页获取图片地址
 func getImageUrlListFromPage(doc *goquery.Document) []string {
@@ -130,9 +126,9 @@ func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
 	cookies := client.ReadCookiesFromFile(cookiesPath)
 	cookiesParam := client.ConvertCookies(cookies)
 	// 初始化 Chromedp 上下文
-	ctx, cancel := client.InitializeChromedpContext(false)
+	ctx, cancel := client.InitChromedpContext(false)
 	defer cancel()
-	menuDoc := GetMenuHtmlDoc(ctx, cookiesParam, galleryUrl)
+	menuDoc := client.GetHtmlDoc(client.GetClickedRenderedPage(ctx, galleryUrl, cookiesParam, "#expandButton"))
 
 	//获取画廊信息
 	galleryInfo := getGalleryInfo(menuDoc, galleryUrl)
