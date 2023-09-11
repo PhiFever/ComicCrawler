@@ -10,7 +10,6 @@ import (
 	"github.com/smallnest/chanx"
 	"github.com/spf13/cast"
 	"log"
-	"math/rand"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -129,17 +128,6 @@ func LoadCache(filePath string, result interface{}) error {
 func FileExists(filePath string) bool {
 	_, err := os.Stat(filePath)
 	return err == nil || os.IsExist(err)
-}
-
-func TrueRandFloat(min, max float64) float64 {
-	// 使用当前时间的纳秒部分作为种子值
-	seed := time.Now().Unix()
-	source := rand.NewSource(seed)
-	randomGenerator := rand.New(source)
-
-	// 生成范围在 [min, max) 内的随机浮点数
-	randomFloat := min + randomGenerator.Float64()*(max-min)
-	return randomFloat
 }
 
 // GetFileTotal 用于获取指定目录下指定后缀的文件数量

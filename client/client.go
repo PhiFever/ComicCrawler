@@ -23,6 +23,28 @@ const (
 	DelayMs    = 330
 )
 
+func TrueRandFloat(min, max float64) float64 {
+	// 使用当前时间的纳秒部分作为种子值
+	seed := time.Now().Unix()
+	source := rand.NewSource(seed)
+	randomGenerator := rand.New(source)
+
+	// 生成范围在 [min, max) 内的随机浮点数
+	randomFloat := min + randomGenerator.Float64()*(max-min)
+	return randomFloat
+}
+
+func TrueRandInt(min, max int) int {
+	// 使用当前时间的纳秒部分作为种子值
+	seed := time.Now().Unix()
+	source := rand.NewSource(seed)
+	randomGenerator := rand.New(source)
+
+	// 生成范围在 [min, max) 内的随机整数
+	randomInt := min + randomGenerator.Intn(max-min)
+	return randomInt
+}
+
 func InitJPEGCollector(headers http.Header) *colly.Collector {
 	c := colly.NewCollector()
 	//TODO: 限制规则似乎不起效果，需要进一步研究
@@ -195,7 +217,7 @@ func GetClickedRenderedPage(ctx context.Context, url string, cookieParams []*net
 		network.SetCookies(cookieParams),
 		chromedp.Navigate(url),
 		chromedp.WaitVisible(clickSelector, chromedp.ByQuery),
-		chromedp.Sleep(time.Millisecond * time.Duration(rand.Intn(2*DelayMs+100))),
+		chromedp.Sleep(time.Millisecond * time.Duration(TrueRandInt(DelayMs, 2*DelayMs+100))),
 		chromedp.Click(clickSelector, chromedp.ByQuery),
 		chromedp.OuterHTML("html", &htmlContent),
 	}
@@ -234,7 +256,7 @@ func GetScrolledPage(ctx context.Context, cookieParams []*network.CookieParam, u
 	for i := 0; i < height; i += scollLength {
 		//Scolltask = append(Scolltask, chromedp.Sleep(1*time.Second))
 		Scolltask = append(Scolltask, chromedp.ActionFunc(func(ctx context.Context) error {
-			time.Sleep(time.Millisecond * 3 * time.Duration(DelayMs))
+			time.Sleep(time.Millisecond * 2 * time.Duration(DelayMs))
 			// 在页面的（200，200）坐标的位置
 			p := input.DispatchMouseEvent(input.MouseWheel, 200, 200)
 			p = p.WithDeltaX(0)
@@ -248,7 +270,7 @@ func GetScrolledPage(ctx context.Context, cookieParams []*network.CookieParam, u
 	var htmlContent string
 	Scolltask = append(Scolltask, chromedp.OuterHTML("html", &htmlContent))
 
-	fmt.Println(height)
+	//fmt.Println(height)
 	//开始执行任务
 	err = chromedp.Run(ctx, Scolltask)
 	if err != nil {

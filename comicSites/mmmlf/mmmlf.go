@@ -169,7 +169,7 @@ func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
 			err := utils.SaveImages(jpegCollector, imageInfoList, safeTitle)
 			utils.ErrorCheck(err)
 			//防止被ban，每处理一篇目录就sleep 5-10 seconds
-			sleepTime := utils.TrueRandFloat(5, 10)
+			sleepTime := client.TrueRandFloat(5, 10)
 			log.Println("Sleep ", cast.ToString(sleepTime), " seconds...")
 			time.Sleep(time.Duration(sleepTime) * time.Second)
 		}

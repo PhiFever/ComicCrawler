@@ -180,7 +180,7 @@ func batchDownloadImage(cookiesParam []*network.CookieParam, imagePageInfoList [
 		utils.ErrorCheck(err)
 
 		//防止被ban，每保存一组图片就sleep 5-15 seconds
-		sleepTime := utils.TrueRandFloat(5, 15)
+		sleepTime := client.TrueRandFloat(5, 15)
 		log.Println("Sleep ", cast.ToString(sleepTime), " seconds...")
 		time.Sleep(time.Duration(sleepTime) * time.Second)
 	}

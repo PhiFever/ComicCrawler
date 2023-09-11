@@ -222,7 +222,7 @@ func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
 			})
 		}
 		//防止被ban，每处理一篇目录就sleep 5-10 seconds
-		sleepTime := utils.TrueRandFloat(5, 10)
+		sleepTime := client.TrueRandFloat(5, 10)
 		log.Println("Sleep ", cast.ToString(sleepTime), " seconds...")
 		time.Sleep(time.Duration(sleepTime) * time.Second)
 
@@ -231,7 +231,7 @@ func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
 		utils.ErrorCheck(err)
 
 		//防止被ban，每保存一篇目录中的所有图片就sleep 5-15 seconds
-		sleepTime = utils.TrueRandFloat(5, 15)
+		sleepTime = client.TrueRandFloat(5, 15)
 		log.Println("Sleep ", cast.ToString(sleepTime), " seconds...")
 		time.Sleep(time.Duration(sleepTime) * time.Second)
 	}

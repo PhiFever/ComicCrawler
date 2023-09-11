@@ -17,7 +17,7 @@ var (
 	cookiesParam = client.ConvertCookies(cookies)
 )
 
-func TestGetClickedRenderedPage(t *testing.T) {
+func TestGetClickedPage(t *testing.T) {
 	// 初始化 Chromedp 上下文
 	ctx, cancel := client.InitChromedpContext(false)
 	defer cancel()
@@ -75,10 +75,10 @@ func Test_getImagePageInfoList(t *testing.T) {
 			gotImagePageInfoList = gotImagePageInfoList[:4]
 			gotIndexToTitleMapList = gotIndexToTitleMapList[:4]
 			if !reflect.DeepEqual(gotImagePageInfoList, tt.wantImagePageInfoList) {
-				t.Errorf("getImagePageInfoList() gotImagePageInfoList = %v, want %v", gotImagePageInfoList, tt.wantImagePageInfoList)
+				t.Errorf("getImagePageInfoList() gotImagePageInfoList = %v, wantUrlList %v", gotImagePageInfoList, tt.wantImagePageInfoList)
 			}
 			if !reflect.DeepEqual(gotIndexToTitleMapList, tt.wantIndexToTitleMapList) {
-				t.Errorf("getImagePageInfoList() gotIndexToTitleMapList = %v, want %v", gotIndexToTitleMapList, tt.wantIndexToTitleMapList)
+				t.Errorf("getImagePageInfoList() gotIndexToTitleMapList = %v, wantUrlList %v", gotIndexToTitleMapList, tt.wantIndexToTitleMapList)
 			}
 		})
 	}
@@ -92,9 +92,10 @@ func Test_getImageUrlListFromPage(t *testing.T) {
 		doc *goquery.Document
 	}
 	tests := []struct {
-		name string
-		args args
-		want []string
+		name              string
+		args              args
+		wantUrlList       []string
+		wantUrlListLength int
 	}{
 		{
 			name: "SWEET HOME 序幕",
@@ -102,7 +103,7 @@ func Test_getImageUrlListFromPage(t *testing.T) {
 				doc: client.GetHtmlDoc(client.GetScrolledPage(ctx, cookiesParam, "https://m.happymh.com/reads/SWEETHOME/1946867")),
 				//doc: client.ReadHtmlDoc("../../static/SWEETHOME/page.html"),
 			},
-			want: []string{
+			wantUrlList: []string{
 				"https://ruicdn.happymh.com/1f290a226753ed7e0c3d3689e1c84102/0d1ecb53f86000d7d0f95d23cfd2015e.jpg",
 				"https://ruicdn.happymh.com/1f290a226753ed7e0c3d3689e1c84102/e908dced3fa3e39406e08a0d20b31dcb.jpg",
 				"https://ruicdn.happymh.com/1f290a226753ed7e0c3d3689e1c84102/9023acfb3f394c36cd608474d775aa22.jpg",
@@ -110,14 +111,19 @@ func Test_getImageUrlListFromPage(t *testing.T) {
 				"https://ruicdn.happymh.com/1f290a226753ed7e0c3d3689e1c84102/7a1788ab5dfe057f311e4642ce655244.jpg",
 				"https://ruicdn.happymh.com/1f290a226753ed7e0c3d3689e1c84102/bfa183442d678a0921a943c6edb323cd.jpg",
 			},
+			wantUrlListLength: 36,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := getImageUrlListFromPage(tt.args.doc)[:6]
+			got := getImageUrlListFromPage(tt.args.doc)
+			if len(got) != tt.wantUrlListLength {
+				t.Errorf("getImageUrlListFromPage() got = %v, wantUrlListLength %v", len(got), tt.wantUrlListLength)
+			}
+			got = got[:6]
 			for i, url := range got {
-				if url != tt.want[i] {
-					t.Errorf("getImageUrlListFromPage() got = %v, want %v", got, tt.want)
+				if url != tt.wantUrlList[i] {
+					t.Errorf("getImageUrlListFromPage() got = %v, wantUrlList %v", got, tt.wantUrlList)
 				}
 			}
 		})
