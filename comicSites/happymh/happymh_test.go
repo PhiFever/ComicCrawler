@@ -53,7 +53,7 @@ func Test_getImagePageInfoList(t *testing.T) {
 			name: "SWEET HOME",
 			args: args{
 				//doc: client.ReadHtmlDoc("../../static/SWEETHOME/menu.html"),
-				doc: client.GetHtmlDoc(client.GetClickedRenderedPage(ctx, "https://m.happymh.com/reads/SWEETHOME/", cookiesParam, "#expandButton")),
+				doc: client.GetHtmlDoc(client.GetClickedRenderedPage(ctx, "https://m.happymh.com/manga/SWEETHOME/", cookiesParam, "#expandButton")),
 			},
 			wantImagePageInfoList: []map[int]string{
 				{0: "https://m.happymh.com/reads/SWEETHOME/1946867"},

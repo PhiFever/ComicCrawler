@@ -12,13 +12,14 @@ import (
 	"github.com/gocolly/colly/v2"
 	"io"
 	"log"
+	"math/rand"
 	"net/http"
 	"os"
 	"time"
 )
 
 const (
-	DEBUG_MODE = true
+	DEBUG_MODE = false
 	DelayMs    = 330
 )
 
@@ -194,6 +195,7 @@ func GetClickedRenderedPage(ctx context.Context, url string, cookieParams []*net
 		network.SetCookies(cookieParams),
 		chromedp.Navigate(url),
 		chromedp.WaitVisible(clickSelector, chromedp.ByQuery),
+		chromedp.Sleep(time.Millisecond * time.Duration(rand.Intn(2*DelayMs+100))),
 		chromedp.Click(clickSelector, chromedp.ByQuery),
 		chromedp.OuterHTML("html", &htmlContent),
 	}
@@ -226,13 +228,13 @@ func GetScrolledPage(ctx context.Context, cookieParams []*network.CookieParam, u
 	}
 
 	//每次滚动的距离（像素）
-	scollLength := 2000
+	scollLength := 1500
 	//增加滚轮滚动的任务
 	var Scolltask = chromedp.Tasks{}
 	for i := 0; i < height; i += scollLength {
-		Scolltask = append(Scolltask, chromedp.Sleep(1*time.Second))
+		//Scolltask = append(Scolltask, chromedp.Sleep(1*time.Second))
 		Scolltask = append(Scolltask, chromedp.ActionFunc(func(ctx context.Context) error {
-			time.Sleep(time.Millisecond * time.Duration(DelayMs))
+			time.Sleep(time.Millisecond * 3 * time.Duration(DelayMs))
 			// 在页面的（200，200）坐标的位置
 			p := input.DispatchMouseEvent(input.MouseWheel, 200, 200)
 			p = p.WithDeltaX(0)

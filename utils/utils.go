@@ -133,7 +133,7 @@ func FileExists(filePath string) bool {
 
 func TrueRandFloat(min, max float64) float64 {
 	// 使用当前时间的纳秒部分作为种子值
-	seed := time.Now().UnixNano()
+	seed := time.Now().Unix()
 	source := rand.NewSource(seed)
 	randomGenerator := rand.New(source)
 
