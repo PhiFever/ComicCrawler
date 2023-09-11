@@ -60,19 +60,6 @@ func buildRequestHeaders() http.Header {
 	return headers
 }
 
-//// GetMenuHtmlDoc 读取cookies文件，获取经过JavaScript渲染后的目录页面
-//func GetMenuHtmlDoc(ctx context.Context, cookiesParam []*network.CookieParam, galleryUrl string) *goquery.Document {
-//	//实际使用时的代码
-//	htmlContent := client.GetClickedRenderedPage(ctx, galleryUrl, cookiesParam, "#expandButton")
-//	// 将 []byte 转换为 io.Reader
-//	reader := bytes.NewReader(htmlContent)
-//	doc, err := goquery.NewDocumentFromReader(reader)
-//	if err != nil {
-//		log.Fatal(err)
-//	}
-//	return doc
-//}
-
 // getImageUrlListFromPage 从单个图片页获取图片地址
 func getImageUrlListFromPage(doc *goquery.Document) []string {
 	var imageUrlList []string
@@ -137,11 +124,6 @@ func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
 
 	if utils.FileExists(filepath.Join(safeTitle, infoJsonPath)) {
 		fmt.Println("发现下载记录")
-		//读取缓存文件
-		var lastGalleryInfo GalleryInfo
-		err := utils.LoadCache(filepath.Join(safeTitle, infoJsonPath), &lastGalleryInfo)
-		utils.ErrorCheck(err)
-
 		mainImagePath, err := filepath.Abs(safeTitle)
 		utils.ErrorCheck(err)
 		beginIndex = utils.GetBeginIndex(mainImagePath, []string{".jpg", ".png"})
@@ -154,6 +136,7 @@ func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
 		fmt.Println("画廊信息获取完毕，程序自动退出。")
 		return
 	}
+
 	fmt.Println("beginIndex=", beginIndex)
 
 	//获取所有图片页面的url
@@ -161,4 +144,6 @@ func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
 	imagePageInfoList = imagePageInfoList[beginIndex:]
 	fmt.Println(len(imagePageInfoList))
 	fmt.Println(len(indexToTitleMapList))
+	err := utils.BuildCache(safeTitle, "menu.json", indexToTitleMapList)
+	utils.ErrorCheck(err)
 }
