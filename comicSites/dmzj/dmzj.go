@@ -6,22 +6,14 @@ import (
 	"ComicCrawler/utils/stack"
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
-	"github.com/chromedp/cdproto/network"
-	"github.com/smallnest/chanx"
-	"github.com/spf13/cast"
-	"log"
 	"net/http"
 	"path/filepath"
 	"strings"
-	"time"
 )
 
 const (
-	cookiesPath       = `dmzj_cookies.json`
-	numWorkers        = 5  //页面处理的并发量
-	batchSize         = 10 //每次下载的图片页面数量，建议为numWorkers的整数倍
-	maxImageInOnePage = 30 //单个图片页中最大图片数量，用于初始化imageInfoChannelSize，设置一个合适的数量可以减少无限有缓冲channel的扩容消耗
-	otherDir          = `其他系列`
+	cookiesPath = `dmzj_cookies.json`
+	otherDir    = `其他系列`
 )
 
 type GalleryInfo struct {
@@ -151,42 +143,6 @@ func buildJpegRequestHeaders() http.Header {
 	return headers
 }
 
-// batchDownloadImage 按batchSize分组渲染页面，获取图片url并保存图片
-func batchDownloadImage(localGetImageUrlListFromPage func(*goquery.Document) []string, localBuildJPEGRequestHeaders func() http.Header,
-	cookiesParam []*network.CookieParam, imagePageInfoList []map[int]string, saveDir string) {
-	for batchIndex := 0; batchIndex < len(imagePageInfoList); batchIndex += batchSize {
-		//每次循环都重新初始化channel和切片
-		subImagePageInfoList := imagePageInfoList[batchIndex:utils.MinInt(batchIndex+batchSize, len(imagePageInfoList))]
-		imagePageInfoListChannel := make(chan map[int]string, len(subImagePageInfoList))
-		//每个图片页中最多有maxImageInOnePage张图片
-		imageInfoChannelSize := maxImageInOnePage * len(subImagePageInfoList)
-		//创建一个无限大小有缓冲channel，用于存储所有图片的信息
-		imageInfoListChannel := chanx.NewUnboundedChan[map[string]string](imageInfoChannelSize)
-		var imageInfoList []map[string]string
-
-		for _, info := range subImagePageInfoList {
-			imagePageInfoListChannel <- info
-		}
-		close(imagePageInfoListChannel)
-
-		utils.SyncParsePage(localGetImageUrlListFromPage, imagePageInfoListChannel, imageInfoListChannel, cookiesParam, numWorkers)
-		close(imageInfoListChannel.In)
-
-		for imageInfo := range imageInfoListChannel.Out {
-			imageInfoList = append(imageInfoList, imageInfo)
-		}
-		// 进行本次处理目录中所有图片的批量保存
-		baseCollector := client.InitJPEGCollector(localBuildJPEGRequestHeaders())
-		err := utils.SaveImages(baseCollector, imageInfoList, saveDir)
-		utils.ErrorCheck(err)
-
-		//防止被ban，每保存一组图片就sleep 5-15 seconds
-		sleepTime := client.TrueRandFloat(5, 15)
-		log.Println("Sleep ", cast.ToString(sleepTime), " seconds...")
-		time.Sleep(time.Duration(sleepTime) * time.Second)
-	}
-}
-
 func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
 	mainBeginIndex := 0
 	otherBeginIndex := 0
@@ -195,9 +151,9 @@ func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
 	cookies := client.ReadCookiesFromFile(cookiesPath)
 	cookiesParam := client.ConvertCookies(cookies)
 	// 初始化 Chromedp 上下文
-	ctx, cancel := client.InitChromedpContext(false)
+	chromeCtx, cancel := client.InitChromedpContext(false)
 	defer cancel()
-	menuDoc := client.GetHtmlDoc(client.GetRenderedPage(ctx, galleryUrl, cookiesParam))
+	menuDoc := client.GetHtmlDoc(client.GetRenderedPage(chromeCtx, cookiesParam, galleryUrl))
 
 	//获取画廊信息
 	galleryInfo := getGalleryInfo(menuDoc, galleryUrl)
@@ -253,9 +209,9 @@ func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
 		utils.ErrorCheck(err)
 	}
 	fmt.Println("正在下载主线剧情...")
-	batchDownloadImage(getImageUrlListFromPage, buildJpegRequestHeaders, cookiesParam, imagePageInfoList, safeTitle)
+	utils.BatchDownloadImage(getImageUrlListFromPage, buildJpegRequestHeaders, client.GetRenderedPage, cookiesParam, imagePageInfoList, safeTitle)
 	fmt.Println("主线剧情下载完毕")
 	fmt.Println("正在下载其他系列...")
-	batchDownloadImage(getImageUrlListFromPage, buildJpegRequestHeaders, cookiesParam, otherImagePageInfoList, otherPath)
+	utils.BatchDownloadImage(getImageUrlListFromPage, buildJpegRequestHeaders, client.GetRenderedPage, cookiesParam, otherImagePageInfoList, otherPath)
 	fmt.Println("其他系列下载完毕")
 }

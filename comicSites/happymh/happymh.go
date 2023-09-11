@@ -32,7 +32,7 @@ func getGalleryInfo(doc *goquery.Document, galleryUrl string) GalleryInfo {
 	return galleryInfo
 }
 
-func buildRequestHeaders() http.Header {
+func buildJpegRequestHeaders() http.Header {
 	headers := http.Header{
 		"authority": []string{"ruicdn.happymh.com"},
 		"method":    []string{"GET"},
@@ -115,7 +115,7 @@ func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
 	// 初始化 Chromedp 上下文
 	ctx, cancel := client.InitChromedpContext(false)
 	defer cancel()
-	menuDoc := client.GetHtmlDoc(client.GetClickedRenderedPage(ctx, galleryUrl, cookiesParam, "#expandButton"))
+	menuDoc := client.GetHtmlDoc(client.GetClickedRenderedPage(ctx, cookiesParam, galleryUrl, "#expandButton"))
 
 	//获取画廊信息
 	galleryInfo := getGalleryInfo(menuDoc, galleryUrl)
@@ -146,4 +146,7 @@ func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
 	fmt.Println(len(indexToTitleMapList))
 	err := utils.BuildCache(safeTitle, "menu.json", indexToTitleMapList)
 	utils.ErrorCheck(err)
+
+	fmt.Println("正在下载图片...")
+	utils.BatchDownloadImage(getImageUrlListFromPage, buildJpegRequestHeaders, client.GetScrolledPage, cookiesParam, imagePageInfoList, safeTitle)
 }

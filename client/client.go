@@ -19,12 +19,12 @@ import (
 )
 
 const (
-	DEBUG_MODE = false
+	DEBUG_MODE = true
 	DelayMs    = 330
 )
 
 func TrueRandFloat(min, max float64) float64 {
-	// 使用当前时间的纳秒部分作为种子值
+	// 使用当前时间作为种子值
 	seed := time.Now().Unix()
 	source := rand.NewSource(seed)
 	randomGenerator := rand.New(source)
@@ -35,7 +35,7 @@ func TrueRandFloat(min, max float64) float64 {
 }
 
 func TrueRandInt(min, max int) int {
-	// 使用当前时间的纳秒部分作为种子值
+	// 使用当前时间作为种子值
 	seed := time.Now().Unix()
 	source := rand.NewSource(seed)
 	randomGenerator := rand.New(source)
@@ -184,7 +184,7 @@ func InitChromedpContext(imageEnabled bool) (context.Context, context.CancelFunc
 }
 
 // GetRenderedPage 获取经过JavaScript渲染后的页面
-func GetRenderedPage(ctx context.Context, url string, cookieParams []*network.CookieParam) []byte {
+func GetRenderedPage(ctx context.Context, cookieParams []*network.CookieParam, url string) []byte {
 	log.Println("正在渲染页面:", url)
 
 	var htmlContent string
@@ -208,7 +208,7 @@ func GetRenderedPage(ctx context.Context, url string, cookieParams []*network.Co
 }
 
 // GetClickedRenderedPage 获取需要点击展开的经过JavaScript渲染后的页面
-func GetClickedRenderedPage(ctx context.Context, url string, cookieParams []*network.CookieParam, clickSelector string) []byte {
+func GetClickedRenderedPage(ctx context.Context, cookieParams []*network.CookieParam, url string, clickSelector string) []byte {
 	log.Println("正在渲染页面:", url)
 
 	var htmlContent string

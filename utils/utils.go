@@ -2,6 +2,7 @@ package utils
 
 import (
 	"ComicCrawler/client"
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
@@ -10,6 +11,7 @@ import (
 	"github.com/smallnest/chanx"
 	"github.com/spf13/cast"
 	"log"
+	"net/http"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -18,6 +20,12 @@ import (
 	"strings"
 	"sync"
 	"time"
+)
+
+const (
+	NumWorkers        = 5  //页面处理的并发量
+	BatchSize         = 10 //每次下载的图片页面数量，建议为numWorkers的整数倍
+	MaxImageInOnePage = 30 //单个图片页中最大图片数量，用于初始化imageInfoChannelSize，设置一个合适的数量可以减少无限有缓冲channel的扩容消耗
 )
 
 func ErrorCheck(err error) {
@@ -272,45 +280,6 @@ func ExtractSubstringFromText(pattern string, text string) (string, error) {
 	}
 }
 
-// SyncParsePage 并发sync.WaitGroup，通过chromedp解析页面，获取图片地址，并发量为numWorkers，返回实际获取的图片地址数量(int)
-// localGetImageUrlFromPage为不同软件包的内部函数，用于从页面中获取图片地址
-func SyncParsePage(localGetImageUrlListFromPage func(*goquery.Document) []string, imagePageInfoListChannel <-chan map[int]string, imageInfoListChannel *chanx.UnboundedChan[map[string]string],
-	cookiesParam []*network.CookieParam, numWorkers int) {
-	var wg sync.WaitGroup
-	// 初始化 Chromedp 上下文
-	ctx, cancel := client.InitChromedpContext(true)
-	defer cancel()
-
-	//WaitGroup 使用计数器来工作。当创建 WaitGroup 时，其计数器初始值为 0
-	//当调用 Add 方法时，计数器增加 1，当调用 Done 方法时，计数器减少 1。当调用 Wait 方法时，goroutine 将会阻塞，直至计数器数值为 0。
-	for i := 0; i < numWorkers; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-
-			for info := range imagePageInfoListChannel {
-				for index, url := range info {
-					//fmt.Println(index, url)
-					pageDoc := client.GetHtmlDoc(client.GetRenderedPage(ctx, url, cookiesParam))
-					//获取图片地址
-					imageUrlList := localGetImageUrlListFromPage(pageDoc)
-					for i, imageUrl := range imageUrlList {
-						imageSuffix := imageUrl[strings.LastIndex(imageUrl, "."):]
-						imageInfo := map[string]string{
-							"imageTitle": cast.ToString(index) + "_" + cast.ToString(i) + imageSuffix,
-							"imageUrl":   imageUrl,
-						}
-						imageInfoListChannel.In <- imageInfo
-					}
-
-				}
-			}
-		}()
-	}
-
-	wg.Wait() // 等待所有任务完成
-}
-
 func CheckUpdate(lastUpdateTime string, newTime string) bool {
 	layout := "2006-01-02" //时间格式模板
 	parsedDate1, err := time.Parse(layout, lastUpdateTime)
@@ -346,4 +315,104 @@ func ElementInSlice(value interface{}, array interface{}) bool {
 		}
 	}
 	return false
+}
+
+// SyncParsePage 并发sync.WaitGroup，通过chromedp解析页面，获取图片地址，并发量为numWorkers，返回实际获取的图片地址数量(int)
+// localGetImageUrlFromPage为不同软件包的内部函数，用于从页面中获取图片地址
+// localGetPage为client的内部函数，用于在不同情况下获取页面内容
+// chromeCtx为chromedp的上下文
+func SyncParsePage(
+	localGetImageUrlListFromPage func(*goquery.Document) []string,
+	localGetPage func(context.Context, []*network.CookieParam, string) []byte,
+	chromeCtxList []context.Context, //FIXME:这个地方应该设置成一个固定大小的chromeCtx池，而不是slice
+	imagePageInfoListChannel <-chan map[int]string, imageInfoListChannel *chanx.UnboundedChan[map[string]string],
+	cookiesParam []*network.CookieParam) {
+
+	var wg sync.WaitGroup
+	//WaitGroup 使用计数器来工作。当创建 WaitGroup 时，其计数器初始值为 0
+	//当调用 Add 方法时，计数器增加 1，当调用 Done 方法时，计数器减少 1。当调用 Wait 方法时，goroutine 将会阻塞，直至计数器数值为 0。
+	for i := 0; i < NumWorkers; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			//每个goroutine从channel中取出一个map，map中包含了图片页的序号和url
+			//若channel非空
+			if info, ok := <-imagePageInfoListChannel; ok {
+				for index, url := range info {
+					fmt.Println(index, url)
+					pageDoc := func() *goquery.Document {
+						//timeoutCtx, cancel := context.WithTimeout(chromeCtxList, 120*time.Second)
+						//defer cancel()
+						//pageDoc := client.GetHtmlDoc(localGetPage(timeoutCtx, cookiesParam, url))
+						//FIXME:从池中取出chromeCtx
+						pageDoc := client.GetHtmlDoc(localGetPage(chromeCtxList[i], cookiesParam, url))
+						return pageDoc
+					}()
+
+					//获取图片地址
+					imageUrlList := localGetImageUrlListFromPage(pageDoc)
+					for k, imageUrl := range imageUrlList {
+						imageSuffix := imageUrl[strings.LastIndex(imageUrl, "."):]
+						imageInfo := map[string]string{
+							"imageTitle": cast.ToString(index) + "_" + cast.ToString(k) + imageSuffix,
+							"imageUrl":   imageUrl,
+						}
+						imageInfoListChannel.In <- imageInfo
+					}
+				}
+			}
+		}()
+
+	}
+
+	wg.Wait() // 等待所有任务完成
+}
+
+// BatchDownloadImage 按batchSize分组渲染页面，获取图片url并保存图片
+func BatchDownloadImage(
+	localGetImageUrlListFromPage func(*goquery.Document) []string,
+	localBuildJPEGRequestHeaders func() http.Header,
+	localGetPage func(context.Context, []*network.CookieParam, string) []byte,
+	cookiesParam []*network.CookieParam, imagePageInfoList []map[int]string, saveDir string) {
+
+	var chromeCtxList []context.Context
+	for i := 0; i < NumWorkers; i++ {
+		// 初始化 Chromedp 上下文
+		chromeCtx, cancel := client.InitChromedpContext(true)
+		defer cancel()
+		chromeCtxList = append(chromeCtxList, chromeCtx)
+	}
+
+	for batchIndex := 0; batchIndex < len(imagePageInfoList); batchIndex += BatchSize {
+		//每次循环都重新初始化channel和切片
+		subImagePageInfoList := imagePageInfoList[batchIndex:MinInt(batchIndex+BatchSize, len(imagePageInfoList))]
+		imagePageInfoListChannel := make(chan map[int]string, len(subImagePageInfoList))
+		//每个图片页中最多有maxImageInOnePage张图片
+		imageInfoChannelSize := MaxImageInOnePage * len(subImagePageInfoList)
+		//创建一个无限大小有缓冲channel，用于存储所有图片的信息
+		imageInfoListChannel := chanx.NewUnboundedChan[map[string]string](imageInfoChannelSize)
+		var imageInfoList []map[string]string
+
+		for _, info := range subImagePageInfoList {
+			imagePageInfoListChannel <- info
+		}
+		close(imagePageInfoListChannel)
+
+		SyncParsePage(localGetImageUrlListFromPage, localGetPage,
+			chromeCtxList, imagePageInfoListChannel, imageInfoListChannel, cookiesParam)
+		close(imageInfoListChannel.In)
+
+		for imageInfo := range imageInfoListChannel.Out {
+			imageInfoList = append(imageInfoList, imageInfo)
+		}
+		// 进行本次处理目录中所有图片的批量保存
+		baseCollector := client.InitJPEGCollector(localBuildJPEGRequestHeaders())
+		err := SaveImages(baseCollector, imageInfoList, saveDir)
+		ErrorCheck(err)
+
+		//防止被ban，每保存一组图片就sleep 5-15 seconds
+		sleepTime := client.TrueRandFloat(5, 15)
+		log.Println("Sleep ", cast.ToString(sleepTime), " seconds...")
+		time.Sleep(time.Duration(sleepTime) * time.Second)
+	}
 }
