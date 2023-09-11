@@ -152,7 +152,8 @@ func buildJpegRequestHeaders() http.Header {
 }
 
 // batchDownloadImage 按batchSize分组渲染页面，获取图片url并保存图片
-func batchDownloadImage(cookiesParam []*network.CookieParam, imagePageInfoList []map[int]string, saveDir string) {
+func batchDownloadImage(localGetImageUrlListFromPage func(*goquery.Document) []string, localBuildJPEGRequestHeaders func() http.Header,
+	cookiesParam []*network.CookieParam, imagePageInfoList []map[int]string, saveDir string) {
 	for batchIndex := 0; batchIndex < len(imagePageInfoList); batchIndex += batchSize {
 		//每次循环都重新初始化channel和切片
 		subImagePageInfoList := imagePageInfoList[batchIndex:utils.MinInt(batchIndex+batchSize, len(imagePageInfoList))]
@@ -168,14 +169,14 @@ func batchDownloadImage(cookiesParam []*network.CookieParam, imagePageInfoList [
 		}
 		close(imagePageInfoListChannel)
 
-		utils.SyncParsePage(getImageUrlListFromPage, imagePageInfoListChannel, imageInfoListChannel, cookiesParam, numWorkers)
+		utils.SyncParsePage(localGetImageUrlListFromPage, imagePageInfoListChannel, imageInfoListChannel, cookiesParam, numWorkers)
 		close(imageInfoListChannel.In)
 
 		for imageInfo := range imageInfoListChannel.Out {
 			imageInfoList = append(imageInfoList, imageInfo)
 		}
 		// 进行本次处理目录中所有图片的批量保存
-		baseCollector := client.InitJPEGCollector(buildJpegRequestHeaders())
+		baseCollector := client.InitJPEGCollector(localBuildJPEGRequestHeaders())
 		err := utils.SaveImages(baseCollector, imageInfoList, saveDir)
 		utils.ErrorCheck(err)
 
@@ -252,9 +253,9 @@ func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
 		utils.ErrorCheck(err)
 	}
 	fmt.Println("正在下载主线剧情...")
-	batchDownloadImage(cookiesParam, imagePageInfoList, safeTitle)
+	batchDownloadImage(getImageUrlListFromPage, buildJpegRequestHeaders, cookiesParam, imagePageInfoList, safeTitle)
 	fmt.Println("主线剧情下载完毕")
 	fmt.Println("正在下载其他系列...")
-	batchDownloadImage(cookiesParam, otherImagePageInfoList, otherPath)
+	batchDownloadImage(getImageUrlListFromPage, buildJpegRequestHeaders, cookiesParam, otherImagePageInfoList, otherPath)
 	fmt.Println("其他系列下载完毕")
 }

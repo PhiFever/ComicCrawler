@@ -28,20 +28,20 @@ func Test_getGalleryInfo(t *testing.T) {
 		want       GalleryInfo
 	}{
 		{
-			name:       "成为夺心魔的必要",
-			galleryUrl: "https://manhua.dmzj.com/chengweiduoxinmodebiyao/",
+			name:       "先下手为强",
+			galleryUrl: "https://manhua.dmzj.com/xianxiashouweiqiang/",
 			want: GalleryInfo{
-				URL:            "https://manhua.dmzj.com/chengweiduoxinmodebiyao/",
-				Title:          "成为夺心魔的必要",
-				LastChapter:    "第150话",
-				LastUpdateTime: "2023-09-01",
+				URL:            "https://manhua.dmzj.com/xianxiashouweiqiang/",
+				Title:          "先下手为强",
+				LastChapter:    "第14话",
+				LastUpdateTime: "2020-05-19",
 				TagList: map[string][]string{
-					"作者":   {"赖惟智"},
-					"分类":   {"青年漫画"},
-					"地域":   {"港台"},
+					"作者":   {"たっくる"},
+					"分类":   {"少年漫画"},
+					"地域":   {"日本"},
 					"状态":   {"连载中"},
-					"题材":   {"欢乐向", "治愈", "西方魔幻"},
-					"最新收录": {"第150话"},
+					"题材":   {"爱情", "校园"},
+					"最新收录": {"第14话"},
 				},
 			},
 		},
