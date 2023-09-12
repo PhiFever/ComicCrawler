@@ -110,7 +110,7 @@ func getImageUrlListFromPage(doc *goquery.Document) []string {
 	return imageUrlList
 }
 
-func buildJpegRequestHeaders() http.Header {
+func buildJPEGRequestHeaders() http.Header {
 	headers := http.Header{
 		"authority": []string{"images.idmzj.com"},
 		"method":    []string{"GET"},
@@ -209,9 +209,9 @@ func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
 		utils.ErrorCheck(err)
 	}
 	fmt.Println("正在下载主线剧情...")
-	utils.BatchDownloadImage(getImageUrlListFromPage, buildJpegRequestHeaders, client.GetRenderedPage, cookiesParam, imagePageInfoList, safeTitle)
+	utils.BatchDownloadImage(getImageUrlListFromPage, buildJPEGRequestHeaders, client.GetRenderedPage, cookiesParam, imagePageInfoList, safeTitle)
 	fmt.Println("主线剧情下载完毕")
 	fmt.Println("正在下载其他系列...")
-	utils.BatchDownloadImage(getImageUrlListFromPage, buildJpegRequestHeaders, client.GetRenderedPage, cookiesParam, otherImagePageInfoList, otherPath)
+	utils.BatchDownloadImage(getImageUrlListFromPage, buildJPEGRequestHeaders, client.GetRenderedPage, cookiesParam, otherImagePageInfoList, otherPath)
 	fmt.Println("其他系列下载完毕")
 }

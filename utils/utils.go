@@ -324,7 +324,7 @@ func ElementInSlice(value interface{}, array interface{}) bool {
 func SyncParsePage(
 	localGetImageUrlListFromPage func(*goquery.Document) []string,
 	localGetPage func(context.Context, []*network.CookieParam, string) []byte,
-	chromeCtxList []context.Context, //FIXME:这个地方应该设置成一个固定大小的chromeCtx池，而不是slice
+	chromeCtxChannel chan context.Context, //FIXME:这个地方应该设置成一个固定大小的chromeCtx池，而不是slice
 	imagePageInfoListChannel <-chan map[int]string, imageInfoListChannel *chanx.UnboundedChan[map[string]string],
 	cookiesParam []*network.CookieParam) {
 
@@ -339,13 +339,14 @@ func SyncParsePage(
 			//若channel非空
 			if info, ok := <-imagePageInfoListChannel; ok {
 				for index, url := range info {
-					fmt.Println(index, url)
+					//fmt.Println(index, url)
 					pageDoc := func() *goquery.Document {
-						//timeoutCtx, cancel := context.WithTimeout(chromeCtxList, 120*time.Second)
-						//defer cancel()
-						//pageDoc := client.GetHtmlDoc(localGetPage(timeoutCtx, cookiesParam, url))
-						//FIXME:从池中取出chromeCtx
-						pageDoc := client.GetHtmlDoc(localGetPage(chromeCtxList[i], cookiesParam, url))
+						chromeCtx := <-chromeCtxChannel
+						timeoutCtx, cancel := context.WithTimeout(chromeCtx, 120*time.Second)
+						defer cancel()
+						pageDoc := client.GetHtmlDoc(localGetPage(timeoutCtx, cookiesParam, url))
+						//pageDoc := client.GetHtmlDoc(localGetPage(chromeCtx, cookiesParam, url))
+						chromeCtxChannel <- chromeCtx
 						return pageDoc
 					}()
 
@@ -375,12 +376,14 @@ func BatchDownloadImage(
 	localGetPage func(context.Context, []*network.CookieParam, string) []byte,
 	cookiesParam []*network.CookieParam, imagePageInfoList []map[int]string, saveDir string) {
 
-	var chromeCtxList []context.Context
+	//syncParsePage使用的channel
+	chromeCtxChannel := make(chan context.Context, NumWorkers)
+	//使用结束后统一手动关闭ctx
+	var cancelList []context.CancelFunc
 	for i := 0; i < NumWorkers; i++ {
-		// 初始化 Chromedp 上下文
 		chromeCtx, cancel := client.InitChromedpContext(true)
-		defer cancel()
-		chromeCtxList = append(chromeCtxList, chromeCtx)
+		chromeCtxChannel <- chromeCtx
+		cancelList = append(cancelList, cancel)
 	}
 
 	for batchIndex := 0; batchIndex < len(imagePageInfoList); batchIndex += BatchSize {
@@ -399,7 +402,7 @@ func BatchDownloadImage(
 		close(imagePageInfoListChannel)
 
 		SyncParsePage(localGetImageUrlListFromPage, localGetPage,
-			chromeCtxList, imagePageInfoListChannel, imageInfoListChannel, cookiesParam)
+			chromeCtxChannel, imagePageInfoListChannel, imageInfoListChannel, cookiesParam)
 		close(imageInfoListChannel.In)
 
 		for imageInfo := range imageInfoListChannel.Out {
@@ -414,5 +417,9 @@ func BatchDownloadImage(
 		sleepTime := client.TrueRandFloat(5, 15)
 		log.Println("Sleep ", cast.ToString(sleepTime), " seconds...")
 		time.Sleep(time.Duration(sleepTime) * time.Second)
+	}
+
+	for _, cancel := range cancelList {
+		cancel()
 	}
 }

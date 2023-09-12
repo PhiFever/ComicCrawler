@@ -230,13 +230,6 @@ func Test_getImageUrlListFromPage(t *testing.T) {
 
 // 由于syncParsePage函数需要传入一个本包的getImageUrlFromPage函数，所以放在本包测试
 func Test_syncParsePage(t *testing.T) {
-	var chromeCtxList []context.Context
-	for i := 0; i < utils.NumWorkers; i++ {
-		// 初始化 Chromedp 上下文
-		chromeCtx, cancel := client.InitChromedpContext(true)
-		defer cancel()
-		chromeCtxList = append(chromeCtxList, chromeCtx)
-	}
 	type args struct {
 		taskData             []map[int]string
 		numWorkers           int
@@ -258,6 +251,7 @@ func Test_syncParsePage(t *testing.T) {
 				taskData: []map[int]string{
 					{2: "https://manhua.dmzj.com/chengweiduoxinmodebiyao/102022.shtml#1"},
 					{137: "https://manhua.dmzj.com/chengweiduoxinmodebiyao/135075.shtml#1"},
+					{53: "https://manhua.dmzj.com/chengweiduoxinmodebiyao/109008.shtml#1"},
 				},
 			},
 			want: []map[string]string{
@@ -281,6 +275,18 @@ func Test_syncParsePage(t *testing.T) {
 					"imageTitle": "137_1.jpg",
 					"imageUrl":   `https://images.idmzj.com/c%2F%E6%88%90%E4%B8%BA%E5%A4%BA%E5%BF%83%E9%AD%94%E7%9A%84%E5%BF%85%E8%A6%81%2F%E7%AC%AC137%E8%AF%9D%2F336527817_147870357908547_2342450812458862125_n.jpg`,
 				},
+				{
+					"imageTitle": "53_0.jpg",
+					"imageUrl":   `https://images.idmzj.com/c%2F%E6%88%90%E4%B8%BA%E5%A4%BA%E5%BF%83%E9%AD%94%E7%9A%84%E5%BF%85%E8%A6%81%2F%E7%AC%AC53%E8%AF%9D%2F53%E6%95%99%E8%AE%AD.jpg`,
+				},
+				{
+					"imageTitle": "53_1.jpg",
+					"imageUrl":   `https://images.idmzj.com/c%2F%E6%88%90%E4%B8%BA%E5%A4%BA%E5%BF%83%E9%AD%94%E7%9A%84%E5%BF%85%E8%A6%81%2F%E7%AC%AC53%E8%AF%9D%2F%E5%B0%BE%E9%A1%B5.jpg`,
+				},
+				{
+					"imageTitle": "53_2.jpg",
+					"imageUrl":   `https://images.idmzj.com/c%2F%E6%88%90%E4%B8%BA%E5%A4%BA%E5%BF%83%E9%AD%94%E7%9A%84%E5%BF%85%E8%A6%81%2F%E7%AC%AC53%E8%AF%9D%2F%E8%B4%BA%E5%9B%BE.jpg`,
+				},
 			},
 		},
 	}
@@ -291,9 +297,20 @@ func Test_syncParsePage(t *testing.T) {
 				tt.args.tasks <- task
 			}
 			close(tt.args.tasks)
+			chromeCtxChannel := make(chan context.Context, utils.NumWorkers)
+			var cancelList []context.CancelFunc
+			for i := 0; i < utils.NumWorkers; i++ {
+				// 初始化 Chromedp 上下文
+				chromeCtx, cancel := client.InitChromedpContext(true)
+				chromeCtxChannel <- chromeCtx
+				cancelList = append(cancelList, cancel)
+			}
 			// 启动并发执行
 			utils.SyncParsePage(getImageUrlListFromPage, client.GetRenderedPage,
-				chromeCtxList, tt.args.tasks, tt.args.imageInfoListChannel, tt.args.cookiesParam)
+				chromeCtxChannel, tt.args.tasks, tt.args.imageInfoListChannel, tt.args.cookiesParam)
+			for _, cancel := range cancelList {
+				cancel()
+			}
 			// 接收所有发送到imageInfoChannel通道的数据
 			var got []map[string]string
 			for i := 0; i < len(tt.want); i++ {

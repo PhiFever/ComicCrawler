@@ -56,47 +56,19 @@ func InitJPEGCollector(headers http.Header) *colly.Collector {
 	}
 	_ = c.Limit(rule)
 
-	//以下的所有设置在重新设置后都会失效
-
 	//设置超时时间
-	c.SetRequestTimeout(60 * time.Second)
+	c.SetRequestTimeout(30 * time.Second)
 
 	c.OnRequest(func(r *colly.Request) {
 		log.Println("Visiting", r.URL)
 		r.Headers = &headers
 	})
 
-	maxRetries := 3
-	retryCount := 0
 	c.OnError(func(r *colly.Response, err error) {
-		fmt.Println("Request URL:", r.Request.URL, "failed with response:", r, "\nError:", err)
-
-		//TODO:如果是“远程主机强迫关闭了一个现有的连接”才进行重试
-
-		// 检查是否达到最大重试次数
-		if retryCount < maxRetries {
-			retryCount++
-			fmt.Printf("Retry attempt %d out of %d...\n", retryCount, maxRetries)
-			//TODO: 重试策略似乎不起效果，需要进一步研究
-			//等待指数退避
-			//waitSeconds := math.Pow(2, float64(2*(retryCount+1)))
-			//等待retryCount分钟
-			waitSeconds := retryCount * 60
-			fmt.Printf("Waiting %d seconds...\n", waitSeconds)
-			time.Sleep(time.Duration(waitSeconds) * time.Second)
-
-			// 重新尝试连接
-			err := r.Request.Retry()
-			log.Println("Retry error:", err)
-		} else {
-			log.Fatal("Exceeded maximum retry attempts. Cannot establish connection.")
-		}
+		log.Fatal(err)
 	})
 
 	c.OnResponse(func(r *colly.Response) {
-		//TODO: 重试策略似乎不起效果，需要进一步研究
-		// 重置重试计数为初始值
-		retryCount = 0
 		//log.Println("Visited", r.Request.URL)
 		//fmt.Println(string(r.Body))
 	})
@@ -183,7 +155,7 @@ func InitChromedpContext(imageEnabled bool) (context.Context, context.CancelFunc
 	return chromeCtx, cancel
 }
 
-// GetRenderedPage 获取经过JavaScript渲染后的页面
+// GetRenderedPage 固定等待5秒，获取经过JavaScript渲染后的页面
 func GetRenderedPage(ctx context.Context, cookieParams []*network.CookieParam, url string) []byte {
 	log.Println("正在渲染页面:", url)
 
@@ -198,7 +170,28 @@ func GetRenderedPage(ctx context.Context, cookieParams []*network.CookieParam, u
 	}
 
 	//开始执行任务
-	//err := chromedp.Run(timeoutCtx,
+	err := chromedp.Run(ctx, tasks)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Println("渲染完毕", url)
+	return []byte(htmlContent)
+}
+
+// GetWaitVisibleRenderedPage 等待指定元素可见，获取经过JavaScript渲染后的页面
+func GetWaitVisibleRenderedPage(ctx context.Context, cookieParams []*network.CookieParam, url string, selector string) []byte {
+	log.Println("正在渲染页面:", url)
+
+	var htmlContent string
+	// 具体任务放在这里
+	var tasks = chromedp.Tasks{
+		network.SetCookies(cookieParams),
+		chromedp.Navigate(url),
+		chromedp.WaitVisible(selector, chromedp.ByQuery),
+		chromedp.OuterHTML("html", &htmlContent),
+	}
+
+	//开始执行任务
 	err := chromedp.Run(ctx, tasks)
 	if err != nil {
 		log.Fatal(err)
@@ -231,8 +224,8 @@ func GetClickedRenderedPage(ctx context.Context, cookieParams []*network.CookieP
 	return []byte(htmlContent)
 }
 
-// GetScrolledPage 获取需要整个页面滚动到底部后经过JavaScript渲染的页面
-func GetScrolledPage(ctx context.Context, cookieParams []*network.CookieParam, url string) []byte {
+// GetScrolledRenderedPage 获取需要整个页面滚动到底部后经过JavaScript渲染的页面
+func GetScrolledRenderedPage(ctx context.Context, cookieParams []*network.CookieParam, url string) []byte {
 	log.Println("正在渲染页面:", url)
 
 	var height int

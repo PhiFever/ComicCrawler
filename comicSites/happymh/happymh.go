@@ -32,7 +32,7 @@ func getGalleryInfo(doc *goquery.Document, galleryUrl string) GalleryInfo {
 	return galleryInfo
 }
 
-func buildJpegRequestHeaders() http.Header {
+func buildJPEGRequestHeaders() http.Header {
 	headers := http.Header{
 		"authority": []string{"ruicdn.happymh.com"},
 		"method":    []string{"GET"},
@@ -148,5 +148,5 @@ func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
 	utils.ErrorCheck(err)
 
 	fmt.Println("正在下载图片...")
-	utils.BatchDownloadImage(getImageUrlListFromPage, buildJpegRequestHeaders, client.GetScrolledPage, cookiesParam, imagePageInfoList, safeTitle)
+	utils.BatchDownloadImage(getImageUrlListFromPage, buildJPEGRequestHeaders, client.GetScrolledRenderedPage, cookiesParam, imagePageInfoList, safeTitle)
 }

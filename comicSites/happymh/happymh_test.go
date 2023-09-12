@@ -30,7 +30,7 @@ func TestGetClickedPage(t *testing.T) {
 func TestGetScrolledPage(t *testing.T) {
 	ctx, cancel := client.InitChromedpContext(true)
 	defer cancel()
-	htmlContent := client.GetScrolledPage(ctx, cookiesParam, "https://m.happymh.com/reads/SWEETHOME/1946867")
+	htmlContent := client.GetScrolledRenderedPage(ctx, cookiesParam, "https://m.happymh.com/reads/SWEETHOME/1946867")
 	//把html内容写入文件
 	err := os.WriteFile("../../static/SWEETHOME/page.htmlContent", htmlContent, 0666)
 	utils.ErrorCheck(err)
@@ -100,7 +100,7 @@ func Test_getImageUrlListFromPage(t *testing.T) {
 		{
 			name: "SWEET HOME 序幕",
 			args: args{
-				doc: client.GetHtmlDoc(client.GetScrolledPage(ctx, cookiesParam, "https://m.happymh.com/reads/SWEETHOME/1946867")),
+				doc: client.GetHtmlDoc(client.GetScrolledRenderedPage(ctx, cookiesParam, "https://m.happymh.com/reads/SWEETHOME/1946867")),
 				//doc: client.ReadHtmlDoc("../../static/SWEETHOME/page.html"),
 			},
 			wantUrlList: []string{
