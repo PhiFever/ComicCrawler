@@ -7,9 +7,12 @@ import (
 	"ComicCrawler/utils/stack"
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
+	"github.com/spf13/cast"
+	"log"
 	"net/http"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 const (
@@ -113,9 +116,9 @@ func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
 	cookies := client.ReadCookiesFromFile(cookiesPath)
 	cookiesParam := client.ConvertCookies(cookies)
 	// 初始化 Chromedp 上下文
-	ctx, cancel := client.InitChromedpContext(false)
+	chromeCtx, cancel := client.InitChromedpContext(false)
 	defer cancel()
-	menuDoc := client.GetHtmlDoc(client.GetClickedRenderedPage(ctx, cookiesParam, galleryUrl, "#expandButton"))
+	menuDoc := client.GetHtmlDoc(client.GetClickedRenderedPage(chromeCtx, cookiesParam, galleryUrl, "#expandButton"))
 
 	//获取画廊信息
 	galleryInfo := getGalleryInfo(menuDoc, galleryUrl)
@@ -148,5 +151,35 @@ func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
 	utils.ErrorCheck(err)
 
 	fmt.Println("正在下载图片...")
-	utils.BatchDownloadImage(getImageUrlListFromPage, buildJPEGRequestHeaders, client.GetScrolledRenderedPage, cookiesParam, imagePageInfoList, safeTitle)
+	//utils.BatchDownloadImage(getImageUrlListFromPage, buildJPEGRequestHeaders, client.GetScrolledRenderedPage, cookiesParam, imagePageInfoList, safeTitle)
+	collector := client.InitJPEGCollector(buildJPEGRequestHeaders())
+	for _, info := range imagePageInfoList {
+		var imageInfoList []map[string]string
+		for index, url := range info {
+			//fmt.Println(index, url)
+			pageDoc := client.GetHtmlDoc(client.GetScrolledRenderedPage(chromeCtx, cookiesParam, url))
+			//获取图片地址
+			imageUrlList := getImageUrlListFromPage(pageDoc)
+			for k, imageUrl := range imageUrlList {
+				imageSuffix := imageUrl[strings.LastIndex(imageUrl, "."):]
+				imageInfo := map[string]string{
+					"imageTitle": cast.ToString(index) + "_" + cast.ToString(k) + imageSuffix,
+					"imageUrl":   imageUrl,
+				}
+				imageInfoList = append(imageInfoList, imageInfo)
+			}
+		}
+		//防止被ban，每处理一篇目录就sleep 5-10 seconds
+		sleepTime := client.TrueRandFloat(5, 10)
+		log.Println("Sleep ", cast.ToString(sleepTime), " seconds...")
+		time.Sleep(time.Duration(sleepTime) * time.Second)
+
+		// 进行本次处理目录中所有图片的批量保存
+		utils.SaveImages(collector, imageInfoList, safeTitle)
+
+		//防止被ban，每保存一篇目录中的所有图片就sleep 5-15 seconds
+		sleepTime = client.TrueRandFloat(5, 15)
+		log.Println("Sleep ", cast.ToString(sleepTime), " seconds...")
+		time.Sleep(time.Duration(sleepTime) * time.Second)
+	}
 }

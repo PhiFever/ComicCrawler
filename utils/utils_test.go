@@ -159,10 +159,7 @@ func TestSaveImages(t *testing.T) {
 	if err != nil {
 		t.Errorf("filepath.Abs() = %s; want nil", err)
 	}
-	err = SaveImages(c, imageDataList, absPath)
-	if err != nil {
-		t.Errorf("saveImages() = %s; want nil", err)
-	}
+	SaveImages(c, imageDataList, absPath)
 	for _, data := range imageDataList {
 		imagePath := filepath.Join(saveDir, data["imageName"])
 		if !FileExists(imagePath) {

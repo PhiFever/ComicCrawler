@@ -19,8 +19,8 @@ import (
 )
 
 const (
-	DEBUG_MODE = true
-	DelayMs    = 330
+	DebugMode = true
+	DelayMs   = 330
 )
 
 func TrueRandFloat(min, max float64) float64 {
@@ -47,14 +47,14 @@ func TrueRandInt(min, max int) int {
 
 func InitJPEGCollector(headers http.Header) *colly.Collector {
 	c := colly.NewCollector()
-	//TODO: 限制规则似乎不起效果，需要进一步研究
-	//限制采集规格
-	rule := &colly.LimitRule{
-		//理论上来说每次请求前会有访问延迟，但是实际使用的时候感觉不出来，不知道为什么
-		RandomDelay: 5 * time.Second,
-		Parallelism: 5, //并发数
-	}
-	_ = c.Limit(rule)
+	////TODO: 限制规则似乎不起效果，需要进一步研究
+	////限制采集规格
+	//rule := &colly.LimitRule{
+	//	//理论上来说每次请求前会有访问延迟，但是实际使用的时候感觉不出来，不知道为什么
+	//	RandomDelay: 5 * time.Second,
+	//	Parallelism: 5, //并发数
+	//}
+	//_ = c.Limit(rule)
 
 	//设置超时时间
 	c.SetRequestTimeout(30 * time.Second)
@@ -142,7 +142,7 @@ func ConvertCookies(cookies []Cookie) []*network.CookieParam {
 func InitChromedpContext(imageEnabled bool) (context.Context, context.CancelFunc) {
 	log.Println("正在初始化 Chromedp 上下文")
 	options := append(chromedp.DefaultExecAllocatorOptions[:],
-		chromedp.Flag("headless", !DEBUG_MODE),
+		chromedp.Flag("headless", !DebugMode),
 		chromedp.Flag("disable-gpu", true),
 		chromedp.Flag("no-sandbox", true),
 		chromedp.Flag("–disable-plugins", true),

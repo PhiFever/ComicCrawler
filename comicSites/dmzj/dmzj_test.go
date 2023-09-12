@@ -245,8 +245,8 @@ func Test_syncParsePage(t *testing.T) {
 		{
 			name: "成为夺心魔的必要",
 			args: args{
-				tasks:                make(chan map[int]string, utils.NumWorkers),
-				imageInfoListChannel: chanx.NewUnboundedChan[map[string]string](utils.NumWorkers),
+				tasks:                make(chan map[int]string, utils.PageParallelism),
+				imageInfoListChannel: chanx.NewUnboundedChan[map[string]string](utils.PageParallelism),
 				cookiesParam:         cookiesParam,
 				taskData: []map[int]string{
 					{2: "https://manhua.dmzj.com/chengweiduoxinmodebiyao/102022.shtml#1"},
@@ -297,9 +297,9 @@ func Test_syncParsePage(t *testing.T) {
 				tt.args.tasks <- task
 			}
 			close(tt.args.tasks)
-			chromeCtxChannel := make(chan context.Context, utils.NumWorkers)
+			chromeCtxChannel := make(chan context.Context, utils.PageParallelism)
 			var cancelList []context.CancelFunc
-			for i := 0; i < utils.NumWorkers; i++ {
+			for i := 0; i < utils.PageParallelism; i++ {
 				// 初始化 Chromedp 上下文
 				chromeCtx, cancel := client.InitChromedpContext(true)
 				chromeCtxChannel <- chromeCtx

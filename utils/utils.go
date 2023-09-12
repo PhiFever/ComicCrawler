@@ -23,7 +23,7 @@ import (
 )
 
 const (
-	NumWorkers        = 5  //页面处理的并发量
+	PageParallelism   = 5  //页面处理的并发量
 	BatchSize         = 10 //每次下载的图片页面数量，建议为numWorkers的整数倍
 	MaxImageInOnePage = 30 //单个图片页中最大图片数量，用于初始化imageInfoChannelSize，设置一个合适的数量可以减少无限有缓冲channel的扩容消耗
 )
@@ -232,8 +232,8 @@ func ReadListFile(filePath string) ([]string, error) {
 	return list, nil
 }
 
-// SaveImages 保存imageInfoList中的所有图片，imageInfoMap中的每个元素都是一个map，包含两个键值对，imageTitle:title和imageUrl:url
-func SaveImages(JPEGCollector *colly.Collector, imageInfoList []map[string]string, saveDir string) error {
+// SaveImages 保存imageInfoList中的所有图片，imageInfoList中的每个元素都是一个map，包含两个键值对，imageTitle:title和imageUrl:url
+func SaveImages(JPEGCollector *colly.Collector, imageInfoList []map[string]string, saveDir string) {
 	dir, err := filepath.Abs(saveDir)
 	err = os.MkdirAll(dir, os.ModePerm)
 	ErrorCheck(err)
@@ -260,8 +260,6 @@ func SaveImages(JPEGCollector *colly.Collector, imageInfoList []map[string]strin
 			fmt.Println("Image saved:", filePath)
 		}
 	}
-
-	return nil
 }
 
 // ExtractSubstringFromText 按照Pattern在text里匹配，找到了就返回匹配到的部分
@@ -331,22 +329,23 @@ func SyncParsePage(
 	var wg sync.WaitGroup
 	//WaitGroup 使用计数器来工作。当创建 WaitGroup 时，其计数器初始值为 0
 	//当调用 Add 方法时，计数器增加 1，当调用 Done 方法时，计数器减少 1。当调用 Wait 方法时，goroutine 将会阻塞，直至计数器数值为 0。
-	for i := 0; i < NumWorkers; i++ {
+	for i := 0; i < PageParallelism; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
 			//每个goroutine从channel中取出一个map，map中包含了图片页的序号和url
 			//若channel非空
-			if info, ok := <-imagePageInfoListChannel; ok {
+			for info := range imagePageInfoListChannel {
 				for index, url := range info {
 					//fmt.Println(index, url)
 					pageDoc := func() *goquery.Document {
 						chromeCtx := <-chromeCtxChannel
-						timeoutCtx, cancel := context.WithTimeout(chromeCtx, 120*time.Second)
-						defer cancel()
-						pageDoc := client.GetHtmlDoc(localGetPage(timeoutCtx, cookiesParam, url))
-						//pageDoc := client.GetHtmlDoc(localGetPage(chromeCtx, cookiesParam, url))
+						//TODO:在这添加超时机制会导致意外的context中止，尚未找到原因
+						//timeoutCtx, cancel := context.WithTimeout(chromeCtx, 120*time.Second)
+						//pageDoc := client.GetHtmlDoc(localGetPage(timeoutCtx, cookiesParam, url))
+						pageDoc := client.GetHtmlDoc(localGetPage(chromeCtx, cookiesParam, url))
 						chromeCtxChannel <- chromeCtx
+						//cancel()
 						return pageDoc
 					}()
 
@@ -363,9 +362,7 @@ func SyncParsePage(
 				}
 			}
 		}()
-
 	}
-
 	wg.Wait() // 等待所有任务完成
 }
 
@@ -377,10 +374,10 @@ func BatchDownloadImage(
 	cookiesParam []*network.CookieParam, imagePageInfoList []map[int]string, saveDir string) {
 
 	//syncParsePage使用的channel
-	chromeCtxChannel := make(chan context.Context, NumWorkers)
+	chromeCtxChannel := make(chan context.Context, PageParallelism)
 	//使用结束后统一手动关闭ctx
 	var cancelList []context.CancelFunc
-	for i := 0; i < NumWorkers; i++ {
+	for i := 0; i < PageParallelism; i++ {
 		chromeCtx, cancel := client.InitChromedpContext(true)
 		chromeCtxChannel <- chromeCtx
 		cancelList = append(cancelList, cancel)
@@ -410,8 +407,7 @@ func BatchDownloadImage(
 		}
 		// 进行本次处理目录中所有图片的批量保存
 		baseCollector := client.InitJPEGCollector(localBuildJPEGRequestHeaders())
-		err := SaveImages(baseCollector, imageInfoList, saveDir)
-		ErrorCheck(err)
+		SaveImages(baseCollector, imageInfoList, saveDir)
 
 		//防止被ban，每保存一组图片就sleep 5-15 seconds
 		sleepTime := client.TrueRandFloat(5, 15)

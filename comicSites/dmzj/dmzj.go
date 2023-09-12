@@ -152,8 +152,8 @@ func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
 	cookiesParam := client.ConvertCookies(cookies)
 	// 初始化 Chromedp 上下文
 	chromeCtx, cancel := client.InitChromedpContext(false)
-	defer cancel()
 	menuDoc := client.GetHtmlDoc(client.GetRenderedPage(chromeCtx, cookiesParam, galleryUrl))
+	cancel()
 
 	//获取画廊信息
 	galleryInfo := getGalleryInfo(menuDoc, galleryUrl)

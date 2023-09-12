@@ -124,7 +124,7 @@ func getImageUrl(c *colly.Collector, imagePageUrl string) string {
 	return imageUrl
 }
 
-func buildJpegRequestHeaders() http.Header {
+func buildJPEGRequestHeaders() http.Header {
 	headers := http.Header{
 		"Accept":             {"image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8"},
 		"Accept-Encoding":    {"gzip, deflate, br"},
@@ -198,7 +198,7 @@ func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
 		return
 	}
 	//重新初始化Collector
-	collector := client.InitJPEGCollector(buildJpegRequestHeaders())
+	collector := client.InitJPEGCollector(buildJPEGRequestHeaders())
 
 	sumPage := int(math.Ceil(float64(galleryInfo.TotalImage) / float64(imageInOnepage)))
 	for i := beginIndex; i < sumPage; i++ {
@@ -227,8 +227,7 @@ func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
 		time.Sleep(time.Duration(sleepTime) * time.Second)
 
 		// 进行本次处理目录中所有图片的批量保存
-		err := utils.SaveImages(collector, imageInfoList, safeTitle)
-		utils.ErrorCheck(err)
+		utils.SaveImages(collector, imageInfoList, safeTitle)
 
 		//防止被ban，每保存一篇目录中的所有图片就sleep 5-15 seconds
 		sleepTime = client.TrueRandFloat(5, 15)
