@@ -101,7 +101,23 @@ func initArgsParse() {
 	flag.BoolVar(&onlyInfo, "i", false, "只获取画廊信息(true/false)，默认为false")
 	flag.StringVar(&listFile, "list", "", "待下载的画廊地址列表文件，每行一个url。(不能与参数-url同时使用)")
 	flag.StringVar(&listFile, "l", "", "待下载的画廊地址列表文件，每行一个url。(不能与参数-url同时使用)")
-	flag.BoolVar(&update, "update", false, "更新全部以下载漫画，不能与其他任何参数一起使用")
+	flag.BoolVar(&update, "update", false, "更新全部已下载的漫画，不能与其他任何参数一起使用")
+}
+
+func getExecutionTime(startTime time.Time, endTime time.Time) string {
+	//按时:分:秒格式输出
+	duration := endTime.Sub(startTime)
+	hours := int(duration.Hours())
+	minutes := int(duration.Minutes()) % 60
+	seconds := int(duration.Seconds()) % 60
+
+	if hours > 0 {
+		return fmt.Sprintf("%d时%d分%d秒", hours, minutes, seconds)
+	} else if minutes > 0 {
+		return fmt.Sprintf("%d分%d秒", minutes, seconds)
+	} else {
+		return fmt.Sprintf("%d秒", seconds)
+	}
 }
 
 func main() {
@@ -162,5 +178,5 @@ func main() {
 	//记录结束时间
 	endTime := time.Now()
 	//计算执行时间，单位为秒
-	success(os.Stdout, "所有gallery下载完毕，共耗时:", endTime.Sub(startTime).Seconds(), "秒")
+	success(os.Stdout, "所有gallery下载完毕，共耗时:", getExecutionTime(startTime, endTime))
 }

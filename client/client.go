@@ -243,29 +243,29 @@ func GetScrolledRenderedPage(ctx context.Context, cookieParams []*network.Cookie
 	}
 
 	//每次滚动的距离（像素）
-	scollLength := 1500
+	scrollLength := 1500
 	//增加滚轮滚动的任务
-	var Scolltask = chromedp.Tasks{}
-	for i := 0; i < height; i += scollLength {
-		//Scolltask = append(Scolltask, chromedp.Sleep(1*time.Second))
-		Scolltask = append(Scolltask, chromedp.ActionFunc(func(ctx context.Context) error {
+	var scrollTask = chromedp.Tasks{}
+	for i := 0; i < height; i += scrollLength {
+		//scrollTask = append(scrollTask, chromedp.Sleep(1*time.Second))
+		scrollTask = append(scrollTask, chromedp.ActionFunc(func(ctx context.Context) error {
 			time.Sleep(time.Millisecond * 2 * time.Duration(DelayMs))
 			// 在页面的（200，200）坐标的位置
 			p := input.DispatchMouseEvent(input.MouseWheel, 200, 200)
 			p = p.WithDeltaX(0)
 			// 滚轮向下滚动1000单位
-			p = p.WithDeltaY(float64(scollLength))
+			p = p.WithDeltaY(float64(scrollLength))
 			err := p.Do(ctx)
 			return err
 		}))
 	}
 
 	var htmlContent string
-	Scolltask = append(Scolltask, chromedp.OuterHTML("html", &htmlContent))
+	scrollTask = append(scrollTask, chromedp.OuterHTML("html", &htmlContent))
 
 	//fmt.Println(height)
 	//开始执行任务
-	err = chromedp.Run(ctx, Scolltask)
+	err = chromedp.Run(ctx, scrollTask)
 	if err != nil {
 		log.Fatal(err)
 	}

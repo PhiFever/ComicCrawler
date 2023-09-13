@@ -151,6 +151,7 @@ func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
 	utils.ErrorCheck(err)
 
 	fmt.Println("正在下载图片...")
+	//FIXME:cloudflare会拦截，导致下载失败
 	//utils.BatchDownloadImage(getImageUrlListFromPage, buildJPEGRequestHeaders, client.GetScrolledRenderedPage, cookiesParam, imagePageInfoList, safeTitle)
 	collector := client.InitJPEGCollector(buildJPEGRequestHeaders())
 	for _, info := range imagePageInfoList {
@@ -173,6 +174,10 @@ func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
 		sleepTime := client.TrueRandFloat(5, 10)
 		log.Println("Sleep ", cast.ToString(sleepTime), " seconds...")
 		time.Sleep(time.Duration(sleepTime) * time.Second)
+		if len(imageInfoList) == 0 {
+			cancel()
+			log.Fatal("imageInfoList is empty, please check browser.")
+		}
 
 		// 进行本次处理目录中所有图片的批量保存
 		utils.SaveImages(collector, imageInfoList, safeTitle)
