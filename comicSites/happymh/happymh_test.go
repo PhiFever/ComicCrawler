@@ -38,6 +38,39 @@ func TestGetScrolledPage(t *testing.T) {
 	utils.ErrorCheck(err)
 }
 
+// 不能通过colly爬取，cloudflare会拦截
+// 该测试函数无法通过
+func TestSaveImages(t *testing.T) {
+	imageInfoList := []map[string]string{
+		{
+			"imageName": "0_0.jpg",
+			"imageUrl":  "https://ruicdn.happymh.com/1f290a226753ed7e0c3d3689e1c84102/0d1ecb53f86000d7d0f95d23cfd2015e.jpg",
+		},
+		{
+			"imageName": "0_1.jpg",
+			"imageUrl":  "https://ruicdn.happymh.com/1f290a226753ed7e0c3d3689e1c84102/e908dced3fa3e39406e08a0d20b31dcb.jpg",
+		},
+		{
+			"imageName": "0_2.jpg",
+			"imageUrl":  "https://ruicdn.happymh.com/1f290a226753ed7e0c3d3689e1c84102/9023acfb3f394c36cd608474d775aa22.jpg",
+		},
+		{
+			"imageName": "0_3.jpg",
+			"imageUrl":  "https://ruicdn.happymh.com/1f290a226753ed7e0c3d3689e1c84102/ea1931741cef35ca30d701f7b568c23d.jpg",
+		},
+		{
+			"imageName": "0_4.jpg",
+			"imageUrl":  "https://ruicdn.happymh.com/1f290a226753ed7e0c3d3689e1c84102/7a1788ab5dfe057f311e4642ce655244.jpg",
+		},
+		{
+			"imageName": "0_5.jpg",
+			"imageUrl":  "https://ruicdn.happymh.com/1f290a226753ed7e0c3d3689e1c84102/bfa183442d678a0921a943c6edb323cd.jpg",
+		},
+	}
+	JPEGCookiesCollector := client.InitJPEGCollectorWithCookies(cookies, buildJPEGRequestHeaders(), "https://ruicdn.happymh.com/")
+	utils.SaveImages(JPEGCookiesCollector, imageInfoList, "../../SWEET HOME")
+}
+
 func Test_getImagePageInfoList(t *testing.T) {
 	// 初始化 Chromedp 上下文
 	ctx, cancel := client.InitChromedpContext(false)

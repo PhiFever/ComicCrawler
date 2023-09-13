@@ -5,8 +5,12 @@ import (
 	"ComicCrawler/client"
 	"ComicCrawler/utils"
 	"ComicCrawler/utils/stack"
+	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
+	"github.com/chromedp/cdproto/network"
+	"github.com/chromedp/chromedp"
 	"github.com/spf13/cast"
 	"log"
 	"net/http"
@@ -110,15 +114,46 @@ func getImagePageInfoList(doc *goquery.Document) (imagePageInfoList []map[int]st
 	return imagePageInfoList, indexToTitleMapList
 }
 
+type UrlResponse struct {
+	Url string `json:"url"`
+}
+
+var cnt = 0
+
+// 监听网络事件
+func listenForNetworkEvent(ctx context.Context) {
+	chromedp.ListenTarget(ctx, func(ev interface{}) {
+		switch ev := ev.(type) {
+		// 是一个响应收到的事件
+		case *network.EventResponseReceived:
+			resp := ev.Response
+			if len(resp.Headers) != 0 {
+				//将这个resp转成json
+				response, err := resp.MarshalJSON()
+				utils.ErrorCheck(err)
+				var res = &UrlResponse{}
+				err = json.Unmarshal(response, &res)
+				utils.ErrorCheck(err)
+				// 我们只关心是图片地址的url
+				if strings.Contains(res.Url, ".jpg") || strings.Contains(res.Url, "f=JPEG") {
+					cnt++
+					// 去对每个图片地址下载图片
+					//downloadImage(res.Url,"美女头像",cnt)
+				}
+			}
+		}
+	})
+}
+
 func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
 	beginIndex := 0
 
 	cookies := client.ReadCookiesFromFile(cookiesPath)
 	cookiesParam := client.ConvertCookies(cookies)
 	// 初始化 Chromedp 上下文
-	chromeCtx, cancel := client.InitChromedpContext(false)
-	defer cancel()
-	menuDoc := client.GetHtmlDoc(client.GetClickedRenderedPage(chromeCtx, cookiesParam, galleryUrl, "#expandButton"))
+	menuChromeCtx, cancel := client.InitChromedpContext(false)
+	menuDoc := client.GetHtmlDoc(client.GetClickedRenderedPage(menuChromeCtx, cookiesParam, galleryUrl, "#expandButton"))
+	cancel()
 
 	//获取画廊信息
 	galleryInfo := getGalleryInfo(menuDoc, galleryUrl)
@@ -151,6 +186,9 @@ func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
 	utils.ErrorCheck(err)
 
 	fmt.Println("正在下载图片...")
+	// 初始化 Chromedp 上下文
+	pageChromeCtx, cancel := client.InitChromedpContext(true)
+	defer cancel()
 	//FIXME:cloudflare会拦截，导致下载失败
 	//utils.BatchDownloadImage(getImageUrlListFromPage, buildJPEGRequestHeaders, client.GetScrolledRenderedPage, cookiesParam, imagePageInfoList, safeTitle)
 	collector := client.InitJPEGCollector(buildJPEGRequestHeaders())
@@ -158,7 +196,8 @@ func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
 		var imageInfoList []map[string]string
 		for index, url := range info {
 			//fmt.Println(index, url)
-			pageDoc := client.GetHtmlDoc(client.GetScrolledRenderedPage(chromeCtx, cookiesParam, url))
+			//FIXME:应该在此处加载图片时就下载图片，而不是在后面的函数中
+			pageDoc := client.GetHtmlDoc(client.GetScrolledRenderedPage(pageChromeCtx, cookiesParam, url))
 			//获取图片地址
 			imageUrlList := getImageUrlListFromPage(pageDoc)
 			for k, imageUrl := range imageUrlList {
@@ -179,6 +218,7 @@ func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
 			log.Fatal("imageInfoList is empty, please check browser.")
 		}
 
+		//FIXME:不能通过colly爬取，cloudflare会拦截
 		// 进行本次处理目录中所有图片的批量保存
 		utils.SaveImages(collector, imageInfoList, safeTitle)
 

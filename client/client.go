@@ -68,10 +68,10 @@ func InitJPEGCollector(headers http.Header) *colly.Collector {
 		log.Fatal(err)
 	})
 
-	c.OnResponse(func(r *colly.Response) {
-		//log.Println("Visited", r.Request.URL)
-		//fmt.Println(string(r.Body))
-	})
+	//c.OnResponse(func(r *colly.Response) {
+	//	log.Println("Visited", r.Request.URL)
+	//	fmt.Println(string(r.Body))
+	//})
 	return c
 }
 
@@ -303,7 +303,7 @@ func ReadHtmlDoc(filePath string) *goquery.Document {
 	return doc
 }
 
-func InitCookiesCollector(cookies []Cookie, baseUrl string) *colly.Collector {
+func InitCollectorWithCookies(cookies []Cookie, baseUrl string) *colly.Collector {
 	//初始化Collector
 	baseCollector := colly.NewCollector(
 		colly.UserAgent(`Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36 Edg/115.0.1901.203`),
@@ -321,4 +321,21 @@ func InitCookiesCollector(cookies []Cookie, baseUrl string) *colly.Collector {
 		}
 	}
 	return baseCollector
+}
+
+func InitJPEGCollectorWithCookies(cookies []Cookie, headers http.Header, baseUrl string) *colly.Collector {
+	JPEGCollector := InitJPEGCollector(headers)
+	// 将Cookies添加到Collector
+	for _, cookie := range cookies {
+		err := JPEGCollector.SetCookies(baseUrl, []*http.Cookie{
+			{
+				Name:  cookie.Name,
+				Value: cookie.Value,
+			},
+		})
+		if err != nil {
+			log.Fatalln(err)
+		}
+	}
+	return JPEGCollector
 }
