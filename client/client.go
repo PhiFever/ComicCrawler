@@ -20,6 +20,7 @@ import (
 	"time"
 )
 
+// DebugMode 用于控制是否开启无头浏览器的调试模式
 var DebugMode = "1"
 
 const (
@@ -167,12 +168,14 @@ func ConvertCookies(cookies []Cookie) []*network.CookieParam {
 }
 
 // InitChromedpContext 实际在每次调用时可以派生一个新的超时context，然后在这个新的context中执行任务，可以避免卡住
-// //timeoutCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
-// //defer cancel()
+// timeoutCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+// defer cancel()
 func InitChromedpContext(imageEnabled bool) (context.Context, context.CancelFunc) {
 	log.Println("正在初始化 Chromedp 上下文")
 	// 设置Chrome启动参数
-	//不需要设置UA，因为chromedp默认使用的就是本机上chrome的UA
+	// 不需要设置UA，因为chromedp默认使用的就是本机上chrome的UA
+	// 如果需要覆写UA，可以使用下面的方法
+	// chromedp.UserAgent(`Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36`),
 	options := append(chromedp.DefaultExecAllocatorOptions[:],
 		chromedp.Flag("headless", !cast.ToBool(DebugMode)),
 		chromedp.Flag("disable-gpu", true),
@@ -287,8 +290,10 @@ func GetScrolledRenderedPage(ctx context.Context, cookieParams []*network.Cookie
 			// 滚轮向下滚动1000单位
 			p = p.WithDeltaY(float64(scrollLength))
 			err := p.Do(ctx)
+			log.Println("滚动了", scrollLength, "像素")
 			return err
 		}))
+
 	}
 
 	var htmlContent string

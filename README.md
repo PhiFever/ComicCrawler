@@ -73,12 +73,8 @@
 ./ComicCrawler.exe -list gallery_list.txt
 ```
 ## 编译release版本命令
-
 ```powershell
-go build -ldflags="-s -w" -ldflags "-X 'main.buildTime=$(git show -s --format=%cd)' -X 'main.goVersion=$(go version)'" -o ComicCrawler.exe main.go
-```
-```powershell
-go build -ldflags "-X 'main.buildTime=$(git show -s --format=%cd)' -X 'main.goVersion=$(go version)' -X 'client.DebugMode=0'" -o ComicCrawler.exe main.go
+go build -ldflags "-X 'main.buildTime=$(git show -s --format=%cd)' -X 'main.goVersion=$(go version)' -X 'ComicCrawler/client.DebugMode=0'" -o ComicCrawler.exe main.go
 ```
 ## 注意事项
 - 请确保您的网络连接正常，并且能够访问支持的站点。

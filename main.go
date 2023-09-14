@@ -39,16 +39,14 @@ type GalleryDownloader struct{}
 func (gd GalleryDownloader) Download(infoJson string, url string, onlyInfo bool) error {
 	// 根据正则表达式判断是哪个软件包的gallery，并调用相应的下载函数
 	if matched, _ := regexp.MatchString(`^https://e-hentai.org/g/[a-z0-9]*/[a-z0-9]{10}/$`, url); matched {
-		//fmt.Println("调用eh包的DownloadGallery函数")
 		eh.DownloadGallery(infoJson, url, onlyInfo)
 	} else if matched, _ := regexp.MatchString(`^https://manhua.dmzj.com/[a-z0-9]*/$`, url); matched {
-		//fmt.Println("调用dmzj包的DownloadGallery函数")
 		dmzj.DownloadGallery(infoJson, url, onlyInfo)
 	} else if matched, _ := regexp.MatchString(`^https://mmmlf.com/book/[0-9]*$`, url); matched {
-		//fmt.Println("调用mmmlf包的DownloadGallery函数")
 		mmmlf.DownloadGallery(infoJson, url, onlyInfo)
 	} else if matched, _ := regexp.MatchString(`^https://m.happymh.com/manga/[a-zA-z0-9]*$`, url); matched {
-		//fmt.Println("调用happymh包的DownloadGallery函数")
+		//这个网站的反爬虫机制比较严格，直接不响应无头浏览器的请求，所以需要设置 DebugMode 为 1
+		client.DebugMode = "1"
 		happymh.DownloadGallery(infoJson, url, onlyInfo)
 	} else {
 		return fmt.Errorf("未知的url格式：%s", url)
