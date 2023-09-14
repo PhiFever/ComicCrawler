@@ -10,6 +10,7 @@ import (
 	"github.com/chromedp/cdproto/network"
 	"github.com/chromedp/chromedp"
 	"github.com/gocolly/colly/v2"
+	"github.com/spf13/cast"
 	"io"
 	"log"
 	"math/rand"
@@ -19,9 +20,10 @@ import (
 	"time"
 )
 
+var DebugMode = "1"
+
 const (
-	DebugMode = true
-	DelayMs   = 330
+	DelayMs = 330
 )
 
 func TrueRandFloat(min, max float64) float64 {
@@ -172,7 +174,7 @@ func InitChromedpContext(imageEnabled bool) (context.Context, context.CancelFunc
 	// 设置Chrome启动参数
 	//不需要设置UA，因为chromedp默认使用的就是本机上chrome的UA
 	options := append(chromedp.DefaultExecAllocatorOptions[:],
-		chromedp.Flag("headless", !DebugMode),
+		chromedp.Flag("headless", !cast.ToBool(DebugMode)),
 		chromedp.Flag("disable-gpu", true),
 		chromedp.Flag("no-sandbox", true),
 		chromedp.Flag("–disable-plugins", true),

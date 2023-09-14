@@ -2,14 +2,7 @@ package happymh
 
 import (
 	"ComicCrawler/client"
-	"ComicCrawler/utils"
 	"github.com/PuerkitoBio/goquery"
-	"io"
-	"log"
-	"net/http"
-	"net/http/cookiejar"
-	"net/url"
-	"os"
 	"reflect"
 	"testing"
 )
@@ -21,99 +14,6 @@ var (
 	cookies      = client.ReadCookiesFromFile(localCookiesPath)
 	cookiesParam = client.ConvertCookies(cookies)
 )
-
-// 该函数为获取画廊目录html的功能函数，不需要测试
-func TestGetClickedPage(t *testing.T) {
-	// 初始化 Chromedp 上下文
-	ctx, cancel := client.InitChromedpContext(false)
-	defer cancel()
-	html := client.GetClickedRenderedPage(ctx, cookiesParam, "https://m.happymh.com/manga/SWEETHOME", "#expandButton")
-	//把html内容写入文件
-	err := os.WriteFile("../../static/SWEETHOME/menu.html", html, 0666)
-	utils.ErrorCheck(err)
-}
-
-// 该函数为获取画廊页面html的功能函数，不需要测试
-func TestGetScrolledPage(t *testing.T) {
-	ctx, cancel := client.InitChromedpContext(true)
-	defer cancel()
-	htmlContent := client.GetScrolledRenderedPage(ctx, cookiesParam, "https://m.happymh.com/reads/SWEETHOME/1947010")
-	//把html内容写入文件
-	err := os.WriteFile("../../static/SWEETHOME/page_127.html", htmlContent, 0666)
-	utils.ErrorCheck(err)
-}
-
-// cloudflare会拦截
-// 该测试函数暂时无法通过
-func TestSaveImage(t *testing.T) {
-	imageInfo := map[string]string{
-		"imageTitle": "0_0.jpg",
-		"imageUrl":   "https://ruicdn.happymh.com/1f290a226753ed7e0c3d3689e1c84102/0d1ecb53f86000d7d0f95d23cfd2015e.jpg",
-	}
-	jar, err := cookiejar.New(nil)
-	if err != nil {
-		log.Fatalf("Got error while creating cookie jar %s", err.Error())
-	}
-	c := http.Client{Jar: jar}
-	req, err := http.NewRequest("GET", imageInfo["imageUrl"], nil)
-	utils.ErrorCheck(err)
-
-	req.Header = buildJPEGRequestHeaders()
-	urlObj, _ := url.Parse(".happymh.com")
-
-	cookiesMap, err := client.GetCookiesDecodeToMap(localCookiesPath)
-	utils.ErrorCheck(err)
-	var httpCookies []*http.Cookie
-	for name, value := range cookiesMap {
-		httpCookies = append(httpCookies, &http.Cookie{Name: name, Value: value})
-	}
-
-	c.Jar.SetCookies(urlObj, httpCookies)
-	res, err := c.Do(req)
-	defer func(Body io.ReadCloser) {
-		err := Body.Close()
-		utils.ErrorCheck(err)
-	}(res.Body)
-	utils.ErrorCheck(err)
-	body, err := io.ReadAll(res.Body)
-	err = utils.SaveFile("../../SWEET HOME/"+imageInfo["imageTitle"], body)
-	utils.ErrorCheck(err)
-}
-
-// cloudflare会拦截
-// 该测试函数暂时无法通过
-func TestSaveImages(t *testing.T) {
-	imageInfoList := []map[string]string{
-		{
-			"imageTitle": "0_0.jpg",
-			"imageUrl":   "https://ruicdn.happymh.com/1f290a226753ed7e0c3d3689e1c84102/0d1ecb53f86000d7d0f95d23cfd2015e.jpg",
-		},
-		{
-			"imageTitle": "0_1.jpg",
-			"imageUrl":   "https://ruicdn.happymh.com/1f290a226753ed7e0c3d3689e1c84102/e908dced3fa3e39406e08a0d20b31dcb.jpg",
-		},
-		{
-			"imageTitle": "0_2.jpg",
-			"imageUrl":   "https://ruicdn.happymh.com/1f290a226753ed7e0c3d3689e1c84102/9023acfb3f394c36cd608474d775aa22.jpg",
-		},
-		{
-			"imageTitle": "0_3.jpg",
-			"imageUrl":   "https://ruicdn.happymh.com/1f290a226753ed7e0c3d3689e1c84102/ea1931741cef35ca30d701f7b568c23d.jpg",
-		},
-		{
-			"imageTitle": "0_4.jpg",
-			"imageUrl":   "https://ruicdn.happymh.com/1f290a226753ed7e0c3d3689e1c84102/7a1788ab5dfe057f311e4642ce655244.jpg",
-		},
-		{
-			"imageTitle": "0_5.jpg",
-			"imageUrl":   "https://ruicdn.happymh.com/1f290a226753ed7e0c3d3689e1c84102/bfa183442d678a0921a943c6edb323cd.jpg",
-		},
-	}
-	//JPEGCookiesCollector := client.InitJPEGCollectorWithCookies(cookies, buildJPEGRequestHeaders(), "https://ruicdn.happymh.com/")
-	//utils.SaveImages(JPEGCookiesCollector, imageInfoList, "../../SWEET HOME")
-	err := utils.BuildCache("../../SWEET HOME/", "imageInfoList.json", imageInfoList)
-	utils.ErrorCheck(err)
-}
 
 func Test_getImagePageInfoList(t *testing.T) {
 	// 初始化 Chromedp 上下文
@@ -176,22 +76,22 @@ func Test_getImageUrlListFromPage(t *testing.T) {
 		wantUrlList       []string
 		wantUrlListLength int
 	}{
-		//{
-		//	name: "SWEET HOME 序幕",
-		//	args: args{
-		//		doc: client.GetHtmlDoc(client.GetScrolledRenderedPage(ctx, cookiesParam, "https://m.happymh.com/reads/SWEETHOME/1946867")),
-		//		//doc: client.ReadHtmlDoc("../../static/SWEETHOME/page.html"),
-		//	},
-		//	wantUrlList: []string{
-		//		"https://ruicdn.happymh.com/1f290a226753ed7e0c3d3689e1c84102/0d1ecb53f86000d7d0f95d23cfd2015e.jpg",
-		//		"https://ruicdn.happymh.com/1f290a226753ed7e0c3d3689e1c84102/e908dced3fa3e39406e08a0d20b31dcb.jpg",
-		//		"https://ruicdn.happymh.com/1f290a226753ed7e0c3d3689e1c84102/9023acfb3f394c36cd608474d775aa22.jpg",
-		//		"https://ruicdn.happymh.com/1f290a226753ed7e0c3d3689e1c84102/ea1931741cef35ca30d701f7b568c23d.jpg",
-		//		"https://ruicdn.happymh.com/1f290a226753ed7e0c3d3689e1c84102/7a1788ab5dfe057f311e4642ce655244.jpg",
-		//		"https://ruicdn.happymh.com/1f290a226753ed7e0c3d3689e1c84102/bfa183442d678a0921a943c6edb323cd.jpg",
-		//	},
-		//	wantUrlListLength: 36,
-		//},
+		{
+			name: "SWEET HOME 序幕",
+			args: args{
+				doc: client.GetHtmlDoc(client.GetScrolledRenderedPage(ctx, cookiesParam, "https://m.happymh.com/reads/SWEETHOME/1946867")),
+				//doc: client.ReadHtmlDoc("../../static/SWEETHOME/page.html"),
+			},
+			wantUrlList: []string{
+				"https://ruicdn.happymh.com/1f290a226753ed7e0c3d3689e1c84102/0d1ecb53f86000d7d0f95d23cfd2015e.jpg",
+				"https://ruicdn.happymh.com/1f290a226753ed7e0c3d3689e1c84102/e908dced3fa3e39406e08a0d20b31dcb.jpg",
+				"https://ruicdn.happymh.com/1f290a226753ed7e0c3d3689e1c84102/9023acfb3f394c36cd608474d775aa22.jpg",
+				"https://ruicdn.happymh.com/1f290a226753ed7e0c3d3689e1c84102/ea1931741cef35ca30d701f7b568c23d.jpg",
+				"https://ruicdn.happymh.com/1f290a226753ed7e0c3d3689e1c84102/7a1788ab5dfe057f311e4642ce655244.jpg",
+				"https://ruicdn.happymh.com/1f290a226753ed7e0c3d3689e1c84102/bfa183442d678a0921a943c6edb323cd.jpg",
+			},
+			wantUrlListLength: 36,
+		},
 		{
 			name: "SWEET HOME 第1话",
 			args: args{
@@ -200,21 +100,21 @@ func Test_getImageUrlListFromPage(t *testing.T) {
 			wantUrlList:       []string{},
 			wantUrlListLength: 50,
 		},
-		//{
-		//	name: "SWEET HOME 第127话",
-		//	args: args{
-		//		doc: client.GetHtmlDoc(client.GetScrolledRenderedPage(ctx, cookiesParam, "https://m.happymh.com/reads/SWEETHOME/1947010")),
-		//	},
-		//	wantUrlList: []string{
-		//		`https://ruicdn.happymh.com/4c3d3575013ec8d5faafae58c4722a98/02dd2c351655516a5522637c0b3be705.jpg`,
-		//		`https://ruicdn.happymh.com/4c3d3575013ec8d5faafae58c4722a98/c12d4f90046fe380f79ececde19470d8.jpg`,
-		//		`https://ruicdn.happymh.com/4c3d3575013ec8d5faafae58c4722a98/25658aadea21ae23f31409c4c5f64a6c.jpg`,
-		//		`https://ruicdn.happymh.com/4c3d3575013ec8d5faafae58c4722a98/b1fa0264793fb0aaf116b171347617db.jpg`,
-		//		`https://ruicdn.happymh.com/4c3d3575013ec8d5faafae58c4722a98/ed3e39fd6590c0ae49ce33472eb8d4b8.jpg`,
-		//		`https://ruicdn.happymh.com/4c3d3575013ec8d5faafae58c4722a98/57f0b34e86a15200dfb9fe5a0d475374.jpg`,
-		//	},
-		//	wantUrlListLength: 75,
-		//},
+		{
+			name: "SWEET HOME 第127话",
+			args: args{
+				doc: client.GetHtmlDoc(client.GetScrolledRenderedPage(ctx, cookiesParam, "https://m.happymh.com/reads/SWEETHOME/1947010")),
+			},
+			wantUrlList: []string{
+				`https://ruicdn.happymh.com/4c3d3575013ec8d5faafae58c4722a98/02dd2c351655516a5522637c0b3be705.jpg`,
+				`https://ruicdn.happymh.com/4c3d3575013ec8d5faafae58c4722a98/c12d4f90046fe380f79ececde19470d8.jpg`,
+				`https://ruicdn.happymh.com/4c3d3575013ec8d5faafae58c4722a98/25658aadea21ae23f31409c4c5f64a6c.jpg`,
+				`https://ruicdn.happymh.com/4c3d3575013ec8d5faafae58c4722a98/b1fa0264793fb0aaf116b171347617db.jpg`,
+				`https://ruicdn.happymh.com/4c3d3575013ec8d5faafae58c4722a98/ed3e39fd6590c0ae49ce33472eb8d4b8.jpg`,
+				`https://ruicdn.happymh.com/4c3d3575013ec8d5faafae58c4722a98/57f0b34e86a15200dfb9fe5a0d475374.jpg`,
+			},
+			wantUrlListLength: 75,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

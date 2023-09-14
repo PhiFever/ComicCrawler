@@ -1,6 +1,7 @@
 package main
 
 import (
+	"ComicCrawler/client"
 	"ComicCrawler/comicSites/dmzj"
 	"ComicCrawler/comicSites/eh"
 	"ComicCrawler/comicSites/happymh"
@@ -128,6 +129,7 @@ func main() {
 		fmt.Printf("Version: %s \n", version)
 		fmt.Printf("Build TimeStamp: %s \n", buildTime)
 		fmt.Printf("GoLang Version: %s \n", goVersion)
+		fmt.Printf("Debug Mode: %s \n", client.DebugMode)
 		os.Exit(0)
 	}
 

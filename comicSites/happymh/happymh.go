@@ -183,10 +183,7 @@ func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
 		//log.Fatal("imageInfoList")
 		for _, imageInfo := range imageInfoList {
 			client.ChromedpDownloadImage(chromeCtx, cookiesParam, imageInfo, safeTitle)
-			//防止被ban，每处理一篇目录就sleep 5-10 seconds
-			sleepTime := client.TrueRandFloat(0, 1)
-			log.Println("Sleep ", cast.ToString(sleepTime), " seconds...")
-			time.Sleep(time.Duration(sleepTime) * time.Second)
+			time.Sleep(time.Millisecond * time.Duration(client.DelayMs))
 		}
 	}
 }
