@@ -260,6 +260,7 @@ func GetClickedRenderedPage(ctx context.Context, cookieParams []*network.CookieP
 }
 
 // GetScrolledRenderedPage 获取需要整个页面滚动到底部后经过JavaScript渲染的页面
+// FIXME:应该加个chromedp.WaitVisible(scrollSelector, chromedp.ByQuery),，等待页面加载完毕
 func GetScrolledRenderedPage(ctx context.Context, cookieParams []*network.CookieParam, url string) []byte {
 	log.Println("正在渲染页面:", url)
 
@@ -377,6 +378,8 @@ func InitJPEGCollectorWithCookies(cookies []Cookie, headers http.Header, baseUrl
 	return JPEGCollector
 }
 
+// ChromedpDownloadImage 从imageUrl下载图片到saveDir
+// https://github.com/chromedp/examples/blob/master/download_image/main.go
 func ChromedpDownloadImage(ctx context.Context, cookieParams []*network.CookieParam, imageInfo map[string]string, saveDir string) {
 	imageUrl := imageInfo["imageUrl"]
 	imageTitle := imageInfo["imageTitle"]

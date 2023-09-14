@@ -45,6 +45,8 @@ func (gd GalleryDownloader) Download(infoJson string, url string, onlyInfo bool)
 	} else if matched, _ := regexp.MatchString(`^https://mmmlf.com/book/[0-9]*$`, url); matched {
 		mmmlf.DownloadGallery(infoJson, url, onlyInfo)
 	} else if matched, _ := regexp.MatchString(`^https://m.happymh.com/manga/[a-zA-z0-9]*$`, url); matched {
+		//因为cloudflare的反爬机制比较严格，所以这里需要设置DebugMode为1
+		client.DebugMode = "1"
 		happymh.DownloadGallery(infoJson, url, onlyInfo)
 	} else {
 		return fmt.Errorf("未知的url格式：%s", url)

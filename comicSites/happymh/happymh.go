@@ -143,6 +143,7 @@ func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
 		}
 		if len(imageInfoList) == 0 {
 			cancel()
+			pageCancel()
 			log.Fatal("imageInfoList is empty, please check browser.")
 		}
 		//防止被ban，每处理一篇目录就sleep 5-10 seconds
@@ -150,7 +151,7 @@ func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
 		log.Println("Sleep ", cast.ToString(sleepTime), " seconds...")
 		time.Sleep(time.Duration(sleepTime) * time.Second)
 
-		//TODO:这块可以设置成异步下载，chromeCtx下载图片，pageCtx解析页面
+		//TODO:这块理论上可以设置成异步下载，chromeCtx下载图片，pageCtx解析页面
 		for _, imageInfo := range imageInfoList {
 			client.ChromedpDownloadImage(chromeCtx, cookiesParam, imageInfo, safeTitle)
 			time.Sleep(time.Millisecond * time.Duration(client.DelayMs))
