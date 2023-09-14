@@ -30,7 +30,7 @@ type GalleryInfo struct {
 func getGalleryInfo(galleryUrl string) GalleryInfo {
 	c := colly.NewCollector(
 		//模拟浏览器
-		colly.UserAgent(`Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36 Edg/115.0.1901.203`),
+		colly.UserAgent(client.ChromeUserAgent),
 	)
 	var galleryInfo GalleryInfo
 	galleryInfo.TagList = make(map[string][]string)
@@ -140,7 +140,7 @@ func buildJPEGRequestHeaders() http.Header {
 		"Sec-Fetch-Mode":     {"no-cors"},
 		"Sec-Fetch-Site":     {"cross-site"},
 		"Sec-Gpc":            {"1"},
-		"User-Agent":         {"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36"},
+		"User-Agent":         {client.ChromeUserAgent},
 	}
 
 	//for key, values := range headers {

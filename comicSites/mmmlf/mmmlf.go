@@ -59,7 +59,7 @@ func buildJpegRequestHeaders() http.Header {
 		"Sec-Fetch-User":            []string{"?1"},
 		"Sec-Gpc":                   []string{"1"},
 		"Upgrade-Insecure-Requests": []string{"1"},
-		"User-Agent":                []string{"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36"},
+		"User-Agent":                []string{client.ChromeUserAgent},
 	}
 
 	return headers
@@ -115,7 +115,7 @@ func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
 	beginIndex := 0
 
 	baseCollector := colly.NewCollector(
-		colly.UserAgent(`Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36 Edg/115.0.1901.203`),
+		colly.UserAgent(client.ChromeUserAgent),
 	)
 	//获取画廊信息
 	galleryInfo := getGalleryInfo(baseCollector, galleryUrl)

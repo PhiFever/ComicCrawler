@@ -24,7 +24,8 @@ import (
 var DebugMode = "1"
 
 const (
-	DelayMs = 330
+	DelayMs         = 330
+	ChromeUserAgent = `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36`
 )
 
 func TrueRandFloat(min, max float64) float64 {
@@ -173,15 +174,15 @@ func ConvertCookies(cookies []Cookie) []*network.CookieParam {
 func InitChromedpContext(imageEnabled bool) (context.Context, context.CancelFunc) {
 	log.Println("正在初始化 Chromedp 上下文")
 	// 设置Chrome启动参数
-	// 不需要设置UA，因为chromedp默认使用的就是本机上chrome的UA
-	// 如果需要覆写UA，可以使用下面的方法
-	// chromedp.UserAgent(`Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36`),
+	// chromedp默认使用的是本机上chrome的UA，但是会因为headerless而被识别为爬虫
+	// 所以需要覆写UA，注意与本机上chrome的UA保持一致，否则可能会过不了一些网站的人机验证
 	options := append(chromedp.DefaultExecAllocatorOptions[:],
 		chromedp.Flag("headless", !cast.ToBool(DebugMode)),
 		chromedp.Flag("disable-gpu", true),
 		chromedp.Flag("no-sandbox", true),
 		chromedp.Flag("–disable-plugins", true),
 		chromedp.Flag("blink-settings", "imagesEnabled="+fmt.Sprintf("%t", imageEnabled)),
+		chromedp.UserAgent(ChromeUserAgent),
 	)
 	allocCtx, cancel := chromedp.NewExecAllocator(context.Background(), options...)
 
@@ -342,7 +343,7 @@ func ReadHtmlDoc(filePath string) *goquery.Document {
 func InitCollectorWithCookies(cookies []Cookie, baseUrl string) *colly.Collector {
 	//初始化Collector
 	baseCollector := colly.NewCollector(
-		colly.UserAgent(`Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36 Edg/115.0.1901.203`),
+		colly.UserAgent(ChromeUserAgent),
 	)
 	// 将Cookies添加到Collector
 	for _, cookie := range cookies {

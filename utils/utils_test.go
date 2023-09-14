@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"ComicCrawler/client"
 	"fmt"
 	"github.com/gocolly/colly/v2"
 	"github.com/spf13/cast"
@@ -152,7 +153,7 @@ func TestReadListFile(t *testing.T) {
 
 func TestSaveImages(t *testing.T) {
 	c := colly.NewCollector(
-		colly.UserAgent(`Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/73.0.3683.103 Safari/537.36`),
+		colly.UserAgent(client.ChromeUserAgent),
 	)
 	absPath, err := filepath.Abs(saveDir)
 	fmt.Println(absPath)

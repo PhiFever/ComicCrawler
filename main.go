@@ -45,8 +45,6 @@ func (gd GalleryDownloader) Download(infoJson string, url string, onlyInfo bool)
 	} else if matched, _ := regexp.MatchString(`^https://mmmlf.com/book/[0-9]*$`, url); matched {
 		mmmlf.DownloadGallery(infoJson, url, onlyInfo)
 	} else if matched, _ := regexp.MatchString(`^https://m.happymh.com/manga/[a-zA-z0-9]*$`, url); matched {
-		//这个网站的反爬虫机制比较严格，直接不响应无头浏览器的请求，所以需要设置 DebugMode 为 1
-		client.DebugMode = "1"
 		happymh.DownloadGallery(infoJson, url, onlyInfo)
 	} else {
 		return fmt.Errorf("未知的url格式：%s", url)

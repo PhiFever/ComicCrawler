@@ -1,12 +1,13 @@
 package mmmlf
 
 import (
+	"ComicCrawler/client"
 	"github.com/gocolly/colly/v2"
 	"reflect"
 	"testing"
 )
 
-var baseCollector = colly.NewCollector(colly.UserAgent(`Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36 Edg/115.0.1901.203`))
+var baseCollector = colly.NewCollector(colly.UserAgent(client.ChromeUserAgent))
 
 func Test_getImagePageInfoList(t *testing.T) {
 	type args struct {
