@@ -59,26 +59,6 @@ func MinInt(x, y int) int {
 	return y
 }
 
-// SaveFile 用于保存文件
-func SaveFile(filePath string, data []byte) error {
-	file, err := os.Create(filePath)
-	//fmt.Println(filePath)
-	if err != nil {
-		return err
-	}
-	defer func(file *os.File) {
-		err := file.Close()
-		ErrorCheck(err)
-	}(file)
-
-	_, err = file.Write(data)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 // BuildCache 用于生成utf-8格式的缓存文件 data为待写入数据结构
 func BuildCache(saveDir string, cacheFile string, data interface{}) error {
 	dir, err := filepath.Abs(saveDir)
@@ -232,6 +212,26 @@ func ReadListFile(filePath string) ([]string, error) {
 	return list, nil
 }
 
+// SaveFile 用于保存文件
+func SaveFile(filePath string, data []byte) error {
+	file, err := os.Create(filePath)
+	//fmt.Println(filePath)
+	if err != nil {
+		return err
+	}
+	defer func(file *os.File) {
+		err := file.Close()
+		ErrorCheck(err)
+	}(file)
+
+	_, err = file.Write(data)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // SaveImages 保存imageInfoList中的所有图片，imageInfoList中的每个元素都是一个map，包含两个键值对，imageTitle:title和imageUrl:url
 func SaveImages(JPEGCollector *colly.Collector, imageInfoList []map[string]string, saveDir string) {
 	dir, err := filepath.Abs(saveDir)
@@ -239,7 +239,6 @@ func SaveImages(JPEGCollector *colly.Collector, imageInfoList []map[string]strin
 	ErrorCheck(err)
 
 	var imageContent []byte
-
 	JPEGCollector.OnResponse(func(r *colly.Response) {
 		imageContent = r.Body
 	})

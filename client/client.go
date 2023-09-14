@@ -15,6 +15,7 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
+	"path/filepath"
 	"time"
 )
 
@@ -120,6 +121,33 @@ func ReadCookiesFromFile(filePath string) []Cookie {
 	return cookies
 }
 
+func GetCookiesDecodeToMap(filePath string) (map[string]string, error) {
+	cookiesMap := make(map[string]string)
+
+	// 读取JSON文件中的Cookie信息
+	cookieData, err := os.ReadFile(filePath)
+	if err != nil {
+		return nil, err
+	}
+
+	//var cookies []map[string]string
+	var cookies []Cookie
+	err = json.Unmarshal(cookieData, &cookies)
+	if err != nil {
+		return nil, err
+	}
+
+	// 将Cookie信息填充到map中
+	//for _, cookie := range cookies {
+	//	cookiesMap[cookie["name"]] = cookie["value"]
+	//}
+	for _, cookie := range cookies {
+		cookiesMap[cookie.Name] = cookie.Value
+	}
+
+	return cookiesMap, nil
+}
+
 // ConvertCookies 将从文件中读取的 Cookies 转换为 chromedp 需要的格式
 func ConvertCookies(cookies []Cookie) []*network.CookieParam {
 	cookieParams := make([]*network.CookieParam, len(cookies))
@@ -141,12 +169,13 @@ func ConvertCookies(cookies []Cookie) []*network.CookieParam {
 // //defer cancel()
 func InitChromedpContext(imageEnabled bool) (context.Context, context.CancelFunc) {
 	log.Println("正在初始化 Chromedp 上下文")
+	// 设置Chrome启动参数
+	//不需要设置UA，因为chromedp默认使用的就是本机上chrome的UA
 	options := append(chromedp.DefaultExecAllocatorOptions[:],
 		chromedp.Flag("headless", !DebugMode),
 		chromedp.Flag("disable-gpu", true),
 		chromedp.Flag("no-sandbox", true),
 		chromedp.Flag("–disable-plugins", true),
-		chromedp.UserAgent(`Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36`),
 		chromedp.Flag("blink-settings", "imagesEnabled="+fmt.Sprintf("%t", imageEnabled)),
 	)
 	allocCtx, cancel := chromedp.NewExecAllocator(context.Background(), options...)
@@ -338,4 +367,63 @@ func InitJPEGCollectorWithCookies(cookies []Cookie, headers http.Header, baseUrl
 		}
 	}
 	return JPEGCollector
+}
+
+func ChromedpDownloadImage(ctx context.Context, cookieParams []*network.CookieParam, imageInfo map[string]string, saveDir string) {
+	imageUrl := imageInfo["imageUrl"]
+	imageTitle := imageInfo["imageTitle"]
+	// set up a channel, so we can block later while we monitor the download
+	// progress
+	done := make(chan bool)
+
+	// this will be used to capture the request id for matching network events
+	var requestID network.RequestID
+
+	// set up a listener to watch the network events and close the channel when
+	// complete the request id matching is important both to filter out
+	// unwanted network events and to reference the downloaded file later
+	chromedp.ListenTarget(ctx, func(v interface{}) {
+		switch ev := v.(type) {
+		case *network.EventRequestWillBeSent:
+			//log.Printf("EventRequestWillBeSent: %v: %v", ev.RequestID, ev.Request.URL)
+			if ev.Request.URL == imageUrl {
+				requestID = ev.RequestID
+			}
+		case *network.EventLoadingFinished:
+			//log.Printf("EventLoadingFinished: %v", ev.RequestID)
+			if ev.RequestID == requestID {
+				close(done)
+			}
+		}
+	})
+
+	// all we need to do here is navigate to the download url
+	if err := chromedp.Run(ctx,
+		network.SetCookies(cookieParams),
+		chromedp.Navigate(imageUrl),
+	); err != nil {
+		log.Fatal(err)
+	}
+
+	// This will block until the chromedp listener closes the channel
+	<-done
+	// get the downloaded bytes for the request id
+	var buf []byte
+	if err := chromedp.Run(ctx, chromedp.ActionFunc(func(ctx context.Context) error {
+		var err error
+		buf, err = network.GetResponseBody(requestID).Do(ctx)
+		return err
+	})); err != nil {
+		log.Fatal(err)
+	}
+
+	// write the file to disk - since we hold the bytes we dictate the name and location
+	filePath, err := filepath.Abs(filepath.Join(saveDir, imageTitle))
+	if err != nil {
+		log.Fatal(err)
+	}
+	if err := os.WriteFile(filePath, buf, 0644); err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("Image saved:", filePath)
 }

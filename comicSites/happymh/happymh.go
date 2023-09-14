@@ -5,12 +5,8 @@ import (
 	"ComicCrawler/client"
 	"ComicCrawler/utils"
 	"ComicCrawler/utils/stack"
-	"context"
-	"encoding/json"
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
-	"github.com/chromedp/cdproto/network"
-	"github.com/chromedp/chromedp"
 	"github.com/spf13/cast"
 	"log"
 	"net/http"
@@ -81,6 +77,7 @@ func getImageUrlListFromPage(doc *goquery.Document) []string {
 	return imageUrlList
 }
 
+// getImagePageInfoList 从主目录页获取所有图片页的url
 func getImagePageInfoList(doc *goquery.Document) (imagePageInfoList []map[int]string, indexToTitleMapList []map[int]string) {
 	imageInfoStack := stack.Stack{}
 	// 找到<div class="cartoon_online_border">
@@ -114,46 +111,15 @@ func getImagePageInfoList(doc *goquery.Document) (imagePageInfoList []map[int]st
 	return imagePageInfoList, indexToTitleMapList
 }
 
-type UrlResponse struct {
-	Url string `json:"url"`
-}
-
-var cnt = 0
-
-// 监听网络事件
-func listenForNetworkEvent(ctx context.Context) {
-	chromedp.ListenTarget(ctx, func(ev interface{}) {
-		switch ev := ev.(type) {
-		// 是一个响应收到的事件
-		case *network.EventResponseReceived:
-			resp := ev.Response
-			if len(resp.Headers) != 0 {
-				//将这个resp转成json
-				response, err := resp.MarshalJSON()
-				utils.ErrorCheck(err)
-				var res = &UrlResponse{}
-				err = json.Unmarshal(response, &res)
-				utils.ErrorCheck(err)
-				// 我们只关心是图片地址的url
-				if strings.Contains(res.Url, ".jpg") || strings.Contains(res.Url, "f=JPEG") {
-					cnt++
-					// 去对每个图片地址下载图片
-					//downloadImage(res.Url,"美女头像",cnt)
-				}
-			}
-		}
-	})
-}
-
 func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
 	beginIndex := 0
 
 	cookies := client.ReadCookiesFromFile(cookiesPath)
 	cookiesParam := client.ConvertCookies(cookies)
 	// 初始化 Chromedp 上下文
-	menuChromeCtx, cancel := client.InitChromedpContext(false)
-	menuDoc := client.GetHtmlDoc(client.GetClickedRenderedPage(menuChromeCtx, cookiesParam, galleryUrl, "#expandButton"))
-	cancel()
+	chromeCtx, cancel := client.InitChromedpContext(true)
+	defer cancel()
+	menuDoc := client.GetHtmlDoc(client.GetClickedRenderedPage(chromeCtx, cookiesParam, galleryUrl, "#expandButton"))
 
 	//获取画廊信息
 	galleryInfo := getGalleryInfo(menuDoc, galleryUrl)
@@ -186,18 +152,13 @@ func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
 	utils.ErrorCheck(err)
 
 	fmt.Println("正在下载图片...")
-	// 初始化 Chromedp 上下文
-	pageChromeCtx, cancel := client.InitChromedpContext(true)
-	defer cancel()
-	//FIXME:cloudflare会拦截，导致下载失败
-	//utils.BatchDownloadImage(getImageUrlListFromPage, buildJPEGRequestHeaders, client.GetScrolledRenderedPage, cookiesParam, imagePageInfoList, safeTitle)
-	collector := client.InitJPEGCollector(buildJPEGRequestHeaders())
 	for _, info := range imagePageInfoList {
 		var imageInfoList []map[string]string
 		for index, url := range info {
-			//fmt.Println(index, url)
-			//FIXME:应该在此处加载图片时就下载图片，而不是在后面的函数中
-			pageDoc := client.GetHtmlDoc(client.GetScrolledRenderedPage(pageChromeCtx, cookiesParam, url))
+			//初始化一个新的chromedp上下文，可能是因为浏览器缓存的原因，如果不初始化新的上下文，会导致后续的页面异常加载
+			pageCtx, cancel := client.InitChromedpContext(true)
+			pageDoc := client.GetHtmlDoc(client.GetScrolledRenderedPage(pageCtx, cookiesParam, url))
+			cancel()
 			//获取图片地址
 			imageUrlList := getImageUrlListFromPage(pageDoc)
 			for k, imageUrl := range imageUrlList {
@@ -209,22 +170,23 @@ func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
 				imageInfoList = append(imageInfoList, imageInfo)
 			}
 		}
-		//防止被ban，每处理一篇目录就sleep 5-10 seconds
-		sleepTime := client.TrueRandFloat(5, 10)
-		log.Println("Sleep ", cast.ToString(sleepTime), " seconds...")
-		time.Sleep(time.Duration(sleepTime) * time.Second)
 		if len(imageInfoList) == 0 {
 			cancel()
 			log.Fatal("imageInfoList is empty, please check browser.")
 		}
-
-		//FIXME:不能通过colly爬取，cloudflare会拦截
-		// 进行本次处理目录中所有图片的批量保存
-		utils.SaveImages(collector, imageInfoList, safeTitle)
-
-		//防止被ban，每保存一篇目录中的所有图片就sleep 5-15 seconds
-		sleepTime = client.TrueRandFloat(5, 15)
+		//防止被ban，每处理一篇目录就sleep 5-10 seconds
+		sleepTime := client.TrueRandFloat(5, 10)
 		log.Println("Sleep ", cast.ToString(sleepTime), " seconds...")
 		time.Sleep(time.Duration(sleepTime) * time.Second)
+		//utils.BuildCache(safeTitle, "imageInfoList.json", imageInfoList)
+		//cancel()
+		//log.Fatal("imageInfoList")
+		for _, imageInfo := range imageInfoList {
+			client.ChromedpDownloadImage(chromeCtx, cookiesParam, imageInfo, safeTitle)
+			//防止被ban，每处理一篇目录就sleep 5-10 seconds
+			sleepTime := client.TrueRandFloat(0, 1)
+			log.Println("Sleep ", cast.ToString(sleepTime), " seconds...")
+			time.Sleep(time.Duration(sleepTime) * time.Second)
+		}
 	}
 }

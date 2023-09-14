@@ -164,12 +164,13 @@ func main() {
 	//设置输出颜色
 	success := color.New(color.Bold, color.FgGreen).FprintlnFunc()
 	fail := color.New(color.Bold, color.FgRed).FprintlnFunc()
-
+	errCount := 0
 	for _, url := range galleryUrlList {
 		success(os.Stdout, "开始下载gallery:", url)
 		err := downloader.Download(infoJsonPath, url, onlyInfo)
 		if err != nil {
 			fail(os.Stderr, "下载失败:", err, "\n")
+			errCount++
 			continue
 		}
 		success(os.Stdout, "gallery下载完毕:", url, "\n")
@@ -179,4 +180,7 @@ func main() {
 	endTime := time.Now()
 	//计算执行时间，单位为秒
 	success(os.Stdout, "所有gallery下载完毕，共耗时:", getExecutionTime(startTime, endTime))
+	if errCount > 0 {
+		fail(os.Stderr, "其中有", errCount, "个下载失败")
+	}
 }
