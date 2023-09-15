@@ -2,9 +2,11 @@ package utils
 
 import (
 	"ComicCrawler/client"
+	"bufio"
 	"fmt"
 	"github.com/gocolly/colly/v2"
 	"github.com/spf13/cast"
+	"os"
 	"path/filepath"
 	"reflect"
 	"testing"
@@ -35,20 +37,20 @@ func TestToSafeFilename(t *testing.T) {
 
 var imageDataList = []map[string]string{
 	{
-		"imageName": "1.jpg",
-		"imageUrl":  `https://th.bing.com/th/id/OIP.SQmqQt18WUcWYyuX8fGGGAHaE8?pid=ImgDet&rs=1`,
+		"imageTitle": "1.jpg",
+		"imageUrl":   `https://th.bing.com/th/id/OIP.SQmqQt18WUcWYyuX8fGGGAHaE8?pid=ImgDet&rs=1`,
 	},
 	{
-		"imageName": "2.jpg",
-		"imageUrl":  `https://th.bing.com/th/id/OIP.6L7shpwxVAIr279rA0B1JQHaE7?pid=ImgDet&rs=1`,
+		"imageTitle": "2.jpg",
+		"imageUrl":   `https://th.bing.com/th/id/OIP.6L7shpwxVAIr279rA0B1JQHaE7?pid=ImgDet&rs=1`,
 	},
 	{
-		"imageName": "3.jpg",
-		"imageUrl":  `https://th.bing.com/th/id/OIP.i242SBVfAPAhfxY5omlfgQHaLP?pid=ImgDet&rs=1`,
+		"imageTitle": "3.jpg",
+		"imageUrl":   `https://th.bing.com/th/id/OIP.i242SBVfAPAhfxY5omlfgQHaLP?pid=ImgDet&rs=1`,
 	},
 	{
-		"imageName": "4.jpg",
-		"imageUrl":  `https://th.bing.com/th/id/OIP._0UYsgLTgJ8WAUYXFXKHRQHaEK?pid=ImgDet&rs=1`,
+		"imageTitle": "4.jpg",
+		"imageUrl":   `https://th.bing.com/th/id/OIP._0UYsgLTgJ8WAUYXFXKHRQHaEK?pid=ImgDet&rs=1`,
 	},
 }
 
@@ -86,6 +88,91 @@ func TestSaveFile(t *testing.T) {
 	}
 }
 
+func TestReadListFile(t *testing.T) {
+	type args struct {
+		filePath string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    []string
+		wantErr bool
+	}{
+		{
+			name: "case1",
+			args: args{
+				filePath: "list.txt",
+			},
+			want: []string{
+				"https://e-hentai.org/g/1111111/1111111111/",
+				"https://e-hentai.org/g/2222222/2222222222/",
+				"https://e-hentai.org/g/3333333/3333333333/",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			func() {
+				file, err := os.Create(tt.args.filePath)
+				if err != nil {
+					panic(err)
+				}
+				defer func(file *os.File) {
+					err := file.Close()
+					if err != nil {
+						panic(err)
+					}
+				}(file)
+
+				// 创建一个 bufio.Writer 来帮助按行写入数据
+				writer := bufio.NewWriter(file)
+				// 循环写入多行数据
+				for _, line := range tt.want {
+					_, err := fmt.Fprintln(writer, line)
+					if err != nil {
+						t.Errorf("ReadListFile().WriteList error = %v, wantErr %v", err, tt.wantErr)
+					}
+				}
+
+				// 刷新缓冲区并检查错误
+				if err := writer.Flush(); err != nil {
+					panic(err)
+				}
+			}()
+			got, err := ReadListFile(tt.args.filePath)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ReadListFile() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("ReadListFile() got = %v, want %v", got, tt.want)
+			}
+			//删除文件
+			err = os.Remove(tt.args.filePath)
+			if err != nil {
+				t.Errorf("ReadListFile() remove file error = %v", err)
+			}
+		})
+	}
+}
+
+func TestSaveImages(t *testing.T) {
+	c := colly.NewCollector(
+		colly.UserAgent(client.ChromeUserAgent),
+	)
+	absPath, err := filepath.Abs(saveDir)
+	fmt.Println(absPath)
+	if err != nil {
+		t.Errorf("filepath.Abs() = %s; want nil", err)
+	}
+	SaveImages(c, imageDataList, absPath)
+	for _, data := range imageDataList {
+		imagePath := filepath.Join(saveDir, data["imageName"])
+		if !FileExists(imagePath) {
+			t.Errorf("image not exists: %s", imagePath)
+		}
+	}
+}
+
 func TestGetFileTotal(t *testing.T) {
 	type args struct {
 		dirPath    string
@@ -112,60 +199,6 @@ func TestGetFileTotal(t *testing.T) {
 				t.Errorf("GetFileTotal() = %v, want %v", total, tt.want)
 			}
 		})
-	}
-}
-
-func TestReadListFile(t *testing.T) {
-	type args struct {
-		filePath string
-	}
-	tests := []struct {
-		name    string
-		args    args
-		want    []string
-		wantErr bool
-	}{
-		{
-			name: "case1",
-			args: args{
-				filePath: "../test/list.txt",
-			},
-			want: []string{
-				"https://e-hentai.org/g/1111111/1111111111/",
-				"https://e-hentai.org/g/2222222/2222222222/",
-				"https://e-hentai.org/g/3333333/3333333333/",
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := ReadListFile(tt.args.filePath)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("ReadListFile() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("ReadListFile() got = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestSaveImages(t *testing.T) {
-	c := colly.NewCollector(
-		colly.UserAgent(client.ChromeUserAgent),
-	)
-	absPath, err := filepath.Abs(saveDir)
-	fmt.Println(absPath)
-	if err != nil {
-		t.Errorf("filepath.Abs() = %s; want nil", err)
-	}
-	SaveImages(c, imageDataList, absPath)
-	for _, data := range imageDataList {
-		imagePath := filepath.Join(saveDir, data["imageName"])
-		if !FileExists(imagePath) {
-			t.Errorf("image not exists: %s", imagePath)
-		}
 	}
 }
 
