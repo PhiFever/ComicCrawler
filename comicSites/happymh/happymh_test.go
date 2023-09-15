@@ -8,7 +8,7 @@ import (
 )
 
 // 主函数和测试函数调用路径的区别
-const localCookiesPath = "../../cookies.json"
+const localCookiesPath = "../../happymh_cookies.json"
 
 var (
 	cookies      = client.ReadCookiesFromFile(localCookiesPath)

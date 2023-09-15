@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	cookiesPath = `cookies.json`
+	cookiesPath = `happymh_cookies.json`
 )
 
 type GalleryInfo struct {
