@@ -39,15 +39,24 @@ type GalleryDownloader struct{}
 func (gd GalleryDownloader) Download(infoJson string, url string, onlyInfo bool) error {
 	// 根据正则表达式判断是哪个软件包的gallery，并调用相应的下载函数
 	if matched, _ := regexp.MatchString(`^https://e-hentai.org/g/[a-z0-9]*/[a-z0-9]{10}/$`, url); matched {
-		eh.DownloadGallery(infoJson, url, onlyInfo)
+		err := eh.DownloadGallery(infoJson, url, onlyInfo)
+		if err != nil {
+			return err
+		}
 	} else if matched, _ := regexp.MatchString(`^https://manhua.dmzj.com/[a-z0-9]*/$`, url); matched {
-		dmzj.DownloadGallery(infoJson, url, onlyInfo)
+		err := dmzj.DownloadGallery(infoJson, url, onlyInfo)
+		if err != nil {
+			return err
+		}
 	} else if matched, _ := regexp.MatchString(`^https://mmmlf.com/book/[0-9]*$`, url); matched {
 		mmmlf.DownloadGallery(infoJson, url, onlyInfo)
 	} else if matched, _ := regexp.MatchString(`^https://m.happymh.com/manga/[a-zA-z0-9]*$`, url); matched {
 		//因为cloudflare的反爬机制比较严格，所以这里需要设置DebugMode为1
 		client.DebugMode = "1"
-		happymh.DownloadGallery(infoJson, url, onlyInfo)
+		err := happymh.DownloadGallery(infoJson, url, onlyInfo)
+		if err != nil {
+			return err
+		}
 	} else {
 		return fmt.Errorf("未知的url格式：%s", url)
 	}

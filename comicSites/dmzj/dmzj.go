@@ -141,7 +141,7 @@ func buildJPEGRequestHeaders() http.Header {
 	return headers
 }
 
-func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
+func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) error {
 	mainBeginIndex := 0
 	otherBeginIndex := 0
 	needUpdate := false
@@ -163,31 +163,41 @@ func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
 		//读取缓存文件
 		var lastGalleryInfo GalleryInfo
 		err := utils.LoadCache(filepath.Join(safeTitle, infoJsonPath), &lastGalleryInfo)
-		utils.ErrorCheck(err)
+		if err != nil {
+			return err
+		}
 
 		needUpdate = utils.CheckUpdate(lastGalleryInfo.LastUpdateTime, galleryInfo.LastUpdateTime)
 		if needUpdate {
 			fmt.Println("发现新章节，更新下载记录")
 			err := utils.BuildCache(safeTitle, infoJsonPath, galleryInfo)
-			utils.ErrorCheck(err)
+			if err != nil {
+				return err
+			}
 		} else {
 			fmt.Println("无需更新下载记录")
 		}
 		mainImagePath, err := filepath.Abs(safeTitle)
-		utils.ErrorCheck(err)
+		if err != nil {
+			return err
+		}
 		mainBeginIndex = utils.GetBeginIndex(mainImagePath, []string{".jpg", ".png"})
 
 		otherImagePath, err := filepath.Abs(filepath.Join(safeTitle, otherDir))
-		utils.ErrorCheck(err)
+		if err != nil {
+			return err
+		}
 		otherBeginIndex = utils.GetBeginIndex(otherImagePath, []string{".jpg", ".png"})
 	} else {
 		//生成缓存文件
 		err := utils.BuildCache(safeTitle, infoJsonPath, galleryInfo)
-		utils.ErrorCheck(err)
+		if err != nil {
+			return err
+		}
 	}
 	if onlyInfo {
 		fmt.Println("画廊信息获取完毕，程序自动退出。")
-		return
+		return nil
 	}
 	fmt.Println("mainBeginIndex=", mainBeginIndex)
 	fmt.Println("otherBeginIndex=", otherBeginIndex)
@@ -200,11 +210,15 @@ func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
 	otherImagePageInfoList = otherImagePageInfoList[otherBeginIndex:]
 
 	err := utils.BuildCache(safeTitle, "menu.json", indexToTitleMapList)
-	utils.ErrorCheck(err)
+	if err != nil {
+		return err
+	}
 	otherPath := filepath.Join(safeTitle, otherDir)
 	if otherImagePageInfoList != nil {
 		err = utils.BuildCache(otherPath, "menu.json", otherIndexToTitleMapList)
-		utils.ErrorCheck(err)
+		if err != nil {
+			return err
+		}
 	}
 	fmt.Println("正在下载主线剧情...")
 	utils.BatchDownloadImage(getImageUrlListFromPage, buildJPEGRequestHeaders, client.GetRenderedPage, cookiesParam, imagePageInfoList, safeTitle)
@@ -212,4 +226,5 @@ func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
 	fmt.Println("正在下载其他系列...")
 	utils.BatchDownloadImage(getImageUrlListFromPage, buildJPEGRequestHeaders, client.GetRenderedPage, cookiesParam, otherImagePageInfoList, otherPath)
 	fmt.Println("其他系列下载完毕")
+	return nil
 }

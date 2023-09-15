@@ -82,7 +82,7 @@ func getImagePageInfoList(doc *goquery.Document) (imagePageInfoList []map[int]st
 	return imagePageInfoList, indexToTitleMapList
 }
 
-func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
+func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) error {
 	beginIndex := 0
 
 	cookies := client.ReadCookiesFromFile(cookiesPath)
@@ -100,16 +100,20 @@ func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
 	if utils.FileExists(filepath.Join(safeTitle, infoJsonPath)) {
 		fmt.Println("发现下载记录")
 		mainImagePath, err := filepath.Abs(safeTitle)
-		utils.ErrorCheck(err)
+		if err != nil {
+			return err
+		}
 		beginIndex = utils.GetBeginIndex(mainImagePath, []string{".jpg", ".png"})
 	} else {
 		//生成缓存文件
 		err := utils.BuildCache(safeTitle, infoJsonPath, galleryInfo)
-		utils.ErrorCheck(err)
+		if err != nil {
+			return err
+		}
 	}
 	if onlyInfo {
 		fmt.Println("画廊信息获取完毕，程序自动退出。")
-		return
+		return nil
 	}
 
 	fmt.Println("beginIndex=", beginIndex)
@@ -119,7 +123,9 @@ func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
 	imagePageInfoList = imagePageInfoList[beginIndex:]
 
 	err := utils.BuildCache(safeTitle, "menu.json", indexToTitleMapList)
-	utils.ErrorCheck(err)
+	if err != nil {
+		return err
+	}
 
 	fmt.Println("正在下载图片...")
 	//FIXME: 此处需要初始化一个新的chromedp上下文，可能是因为浏览器缓存的原因，如果不初始化新的上下文，会导致后续的页面异常加载
@@ -144,7 +150,7 @@ func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
 		if len(imageInfoList) == 0 {
 			cancel()
 			pageCancel()
-			log.Fatal("imageInfoList is empty, please check browser.")
+			return fmt.Errorf("imageInfoList is empty, please check browser")
 		}
 		//防止被ban，每处理一篇目录就sleep 5-10 seconds
 		sleepTime := client.TrueRandFloat(5, 10)
@@ -157,4 +163,5 @@ func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
 			time.Sleep(time.Millisecond * time.Duration(client.DelayMs))
 		}
 	}
+	return nil
 }

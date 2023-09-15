@@ -157,7 +157,7 @@ func getImageInfoFromPage(c *colly.Collector, imagePageUrl string) (string, stri
 	return imageTitle, imageUrl
 }
 
-func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
+func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) error {
 	//目录号
 	beginIndex := 0
 	//余数
@@ -178,10 +178,9 @@ func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
 		remainImageCount := galleryInfo.TotalImage - downloadedImageCount
 		if remainImageCount == 0 {
 			fmt.Println("本gallery已经下载完毕")
-			return
+			return nil
 		} else if remainImageCount < 0 {
-			fmt.Println("下载记录有误！")
-			return
+			return fmt.Errorf("下载记录有误！")
 		} else {
 			fmt.Println("剩余图片数量:", remainImageCount)
 			beginIndex = int(math.Floor(float64(downloadedImageCount) / float64(imageInOnepage)))
@@ -190,12 +189,14 @@ func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
 	} else {
 		//生成缓存文件
 		err := utils.BuildCache(safeTitle, infoJsonPath, galleryInfo)
-		utils.ErrorCheck(err)
+		if err != nil {
+			return err
+		}
 	}
 
 	if onlyInfo {
 		fmt.Println("画廊信息获取完毕，程序自动退出。")
-		return
+		return nil
 	}
 	//重新初始化Collector
 	collector := client.InitJPEGCollector(buildJPEGRequestHeaders())
@@ -234,4 +235,5 @@ func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
 		log.Println("Sleep ", cast.ToString(sleepTime), " seconds...")
 		time.Sleep(time.Duration(sleepTime) * time.Second)
 	}
+	return nil
 }
