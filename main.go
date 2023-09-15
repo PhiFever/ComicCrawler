@@ -5,7 +5,6 @@ import (
 	"ComicCrawler/comicSites/dmzj"
 	"ComicCrawler/comicSites/eh"
 	"ComicCrawler/comicSites/happymh"
-	"ComicCrawler/comicSites/mmmlf"
 	"ComicCrawler/utils"
 	"flag"
 	"fmt"
@@ -48,8 +47,6 @@ func (gd GalleryDownloader) Download(infoJson string, url string, onlyInfo bool)
 		if err != nil {
 			return err
 		}
-	} else if matched, _ := regexp.MatchString(`^https://mmmlf.com/book/[0-9]*$`, url); matched {
-		mmmlf.DownloadGallery(infoJson, url, onlyInfo)
 	} else if matched, _ := regexp.MatchString(`^https://m.happymh.com/manga/[a-zA-z0-9]*$`, url); matched {
 		//因为cloudflare的反爬机制比较严格，所以这里需要设置DebugMode为1，使其不使用headless模式
 		client.DebugMode = "1"
