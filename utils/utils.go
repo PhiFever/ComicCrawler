@@ -321,7 +321,7 @@ func ElementInSlice(value interface{}, array interface{}) bool {
 func SyncParsePage(
 	localGetImageUrlListFromPage func(*goquery.Document) []string,
 	localGetPage func(context.Context, []*network.CookieParam, string) []byte,
-	chromeCtxChannel chan context.Context, //FIXME:这个地方应该设置成一个固定大小的chromeCtx池，而不是slice
+	chromeCtxChannel chan context.Context,
 	imagePageInfoListChannel <-chan map[int]string, imageInfoListChannel *chanx.UnboundedChan[map[string]string],
 	cookiesParam []*network.CookieParam) {
 

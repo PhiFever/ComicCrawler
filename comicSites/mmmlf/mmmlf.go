@@ -141,21 +141,21 @@ func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
 	jpegCollector := client.InitJPEGCollector(buildJpegRequestHeaders())
 
 	//获取所有图片页面的url
-	imagePageUrlList, indexToTitleMapList := getImagePageInfoList(jpegCollector, galleryUrl)
+	imagePageInfoList, indexToTitleMapList := getImagePageInfoList(jpegCollector, galleryUrl)
 	//FIXME:为什么要减1？因为beginIndex是从0开始的，而imagePageUrlList的index是从1开始的
 	//所以当beginIndex=0时程序会报错
 	//if beginIndex != 0 {
-	//	imagePageUrlList = imagePageUrlList[beginIndex-1:]
+	//	imagePageInfoList = imagePageInfoList[beginIndex-1:]
 	//}
-	imagePageUrlList = imagePageUrlList[beginIndex:]
+	imagePageInfoList = imagePageInfoList[beginIndex:]
 
 	err := utils.BuildCache(safeTitle, "menu.json", indexToTitleMapList)
 	utils.ErrorCheck(err)
 
 	//对每话的页面进行处理
-	for _, imagePageUrl := range imagePageUrlList {
+	for _, pageInfo := range imagePageInfoList {
 		var imageInfoList []map[string]string
-		for key, pageUrl := range imagePageUrl {
+		for key, pageUrl := range pageInfo {
 			imageUrlList := getImageUrlListFromPage(baseCollector, pageUrl)
 			for i, imageUrl := range imageUrlList {
 				imageSuffix := imageUrl[strings.LastIndex(imageUrl, "."):]

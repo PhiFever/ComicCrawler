@@ -260,7 +260,7 @@ func GetClickedRenderedPage(ctx context.Context, cookieParams []*network.CookieP
 }
 
 // GetScrolledRenderedPage 获取需要整个页面滚动到底部后经过JavaScript渲染的页面
-// FIXME:应该加个chromedp.WaitVisible(scrollSelector, chromedp.ByQuery),，等待页面加载完毕
+// FIXME:也许应该加个chromedp.WaitVisible(scrollSelector, chromedp.ByQuery),，等待页面加载完毕
 func GetScrolledRenderedPage(ctx context.Context, cookieParams []*network.CookieParam, url string) []byte {
 	log.Println("正在渲染页面:", url)
 
@@ -437,4 +437,20 @@ func ChromedpDownloadImage(ctx context.Context, cookieParams []*network.CookiePa
 		log.Fatal(err)
 	}
 	fmt.Println("Image saved:", filePath)
+}
+
+// ChromedpClearCash 清除浏览器缓存
+func ChromedpClearCash(ctx context.Context) {
+	err := chromedp.Run(ctx,
+		chromedp.ActionFunc(func(ctx context.Context) error {
+			// 清除浏览器缓存
+			err := network.ClearBrowserCache().Do(ctx)
+			return err
+		}),
+	)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
 }

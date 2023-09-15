@@ -117,8 +117,7 @@ func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
 	//获取所有图片页面的url
 	imagePageInfoList, indexToTitleMapList := getImagePageInfoList(menuDoc)
 	imagePageInfoList = imagePageInfoList[beginIndex:]
-	fmt.Println(len(imagePageInfoList))
-	fmt.Println(len(indexToTitleMapList))
+
 	err := utils.BuildCache(safeTitle, "menu.json", indexToTitleMapList)
 	utils.ErrorCheck(err)
 
@@ -130,6 +129,7 @@ func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) {
 		var imageInfoList []map[string]string
 		for index, url := range pageInfo {
 			pageDoc := client.GetHtmlDoc(client.GetScrolledRenderedPage(pageCtx, cookiesParam, url))
+			client.ChromedpClearCash(pageCtx)
 			//获取图片地址
 			imageUrlList := getImageUrlListFromPage(pageDoc)
 			for k, imageUrl := range imageUrlList {
