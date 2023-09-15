@@ -16,6 +16,7 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"time"
 )
@@ -453,4 +454,17 @@ func ChromedpClearCash(ctx context.Context) {
 		log.Fatal(err)
 	}
 
+}
+
+func CleanChromedpTemp() error {
+	psScript := `$files = Get-ChildItem $env:TEMP -Filter "chromedp*"
+foreach ($file in $files) {
+    Remove-Item $file.FullName -Recurse
+}
+`
+	cmd := exec.Command("powershell", "-Command", psScript)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	err := cmd.Run()
+	return err
 }

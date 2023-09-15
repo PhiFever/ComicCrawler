@@ -51,7 +51,7 @@ func (gd GalleryDownloader) Download(infoJson string, url string, onlyInfo bool)
 	} else if matched, _ := regexp.MatchString(`^https://mmmlf.com/book/[0-9]*$`, url); matched {
 		mmmlf.DownloadGallery(infoJson, url, onlyInfo)
 	} else if matched, _ := regexp.MatchString(`^https://m.happymh.com/manga/[a-zA-z0-9]*$`, url); matched {
-		//因为cloudflare的反爬机制比较严格，所以这里需要设置DebugMode为1
+		//因为cloudflare的反爬机制比较严格，所以这里需要设置DebugMode为1，使其不使用headless模式
 		client.DebugMode = "1"
 		err := happymh.DownloadGallery(infoJson, url, onlyInfo)
 		if err != nil {
@@ -182,6 +182,12 @@ func main() {
 			continue
 		}
 		success(os.Stdout, "gallery下载完毕:", url, "\n")
+	}
+
+	//清理临时文件
+	err := client.CleanChromedpTemp()
+	if err != nil {
+		fail(os.Stderr, "清理临时文件时出错：", err)
 	}
 
 	//记录结束时间

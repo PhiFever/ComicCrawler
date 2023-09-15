@@ -150,7 +150,7 @@ func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) erro
 		if len(imageInfoList) == 0 {
 			cancel()
 			pageCancel()
-			return fmt.Errorf("imageInfoList is empty, please check browser")
+			return fmt.Errorf("imageInfoList is empty")
 		}
 		//防止被ban，每处理一篇目录就sleep 5-10 seconds
 		sleepTime := client.TrueRandFloat(5, 10)
