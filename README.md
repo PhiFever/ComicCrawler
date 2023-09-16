@@ -60,21 +60,21 @@
 ```powershell
 ./ComicCrawler.exe -h
 ```
-2. 获取gallery信息，并下载图片(url为gallery目录页的url，尾部注意带上`/`)
+2. 获取gallery信息，并下载图片(url为gallery目录页的url)
 ```powershell
-./ComicCrawler.exe -url https://e-hentai.org/g/xxxxxx/xxxxxxxxxx/
+./ComicCrawler.exe -url https://e-hentai.org/g/xxxxxx/xxxxxxxxxx
 ```
 3. 只获取gallery信息，不下载图片
 ```powershell
-./ComicCrawler.exe -url https://e-hentai.org/g/xxxxxx/xxxxxxxxxx/ -info true
+./ComicCrawler.exe -url https://e-hentai.org/g/xxxxxx/xxxxxxxxxx/ -info
 ```
 4. 下载gallery列表中的所有gallery（不能与-url一起使用）
 ```powershell
 ./ComicCrawler.exe -list gallery_list.txt
 ```
-## 编译release版本命令
+## 构建
 ```powershell
-go build -ldflags "-X 'main.buildTime=$(git show -s --format=%cd)' -X 'main.goVersion=$(go version)' -X 'ComicCrawler/client.DebugMode=0'" -o ComicCrawler.exe main.go
+./make.ps1
 ```
 ## 注意事项
 - 请确保您的网络连接正常，并且能够访问支持的站点。

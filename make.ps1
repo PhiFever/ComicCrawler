@@ -1,0 +1,1 @@
+go build -ldflags "-X 'main.buildTime=$(git show -s --format=%cd)' -X 'main.goVersion=$(go version)' -X 'ComicCrawler/client.DebugMode=0'" -o ComicCrawler.exe main.go
