@@ -150,7 +150,7 @@ func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) erro
 	cookiesParam := client.ConvertCookies(cookies)
 	// 初始化 Chromedp 上下文
 	chromeCtx, cancel := client.InitChromedpContext(false)
-	menuDoc := client.GetHtmlDoc(client.GetRenderedPage(chromeCtx, cookiesParam, galleryUrl))
+	menuDoc := client.GetHtmlDoc(client.GetWaitVisibleRenderedPage(chromeCtx, cookiesParam, galleryUrl, `#__nuxt > div > div:nth-child(2) > div.wrap > div.left > div > div.anim_intro > div.week_mend > div > div.anim-main_list`))
 	cancel()
 
 	//获取画廊信息

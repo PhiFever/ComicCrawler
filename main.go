@@ -6,9 +6,10 @@ import (
 	"ComicCrawler/comicSites/eh"
 	"ComicCrawler/comicSites/happymh"
 	"ComicCrawler/utils"
-	"flag"
 	"fmt"
 	"github.com/fatih/color"
+	"github.com/spf13/cast"
+	"github.com/urfave/cli/v2"
 	"log"
 	"os"
 	"path/filepath"
@@ -19,13 +20,10 @@ import (
 const infoJsonPath = "galleryInfo.json"
 
 var (
-	galleryUrl string
+	onlyUpdate bool
 	onlyInfo   bool
+	galleryUrl string
 	listFile   string
-	update     bool
-	buildTime  string
-	goVersion  string
-	version    = "v1.0.0"
 )
 
 type GalleryInfo struct {
@@ -99,16 +97,6 @@ func getDownLoadedGalleryUrl() []string {
 	return downloadedGalleryUrlList
 }
 
-func initArgsParse() {
-	flag.StringVar(&galleryUrl, "url", "", "待下载的画廊地址（必填）")
-	flag.StringVar(&galleryUrl, "u", "", "待下载的画廊地址（必填）")
-	flag.BoolVar(&onlyInfo, "info", false, "只获取画廊信息(true/false)，默认为false")
-	flag.BoolVar(&onlyInfo, "i", false, "只获取画廊信息(true/false)，默认为false")
-	flag.StringVar(&listFile, "list", "", "待下载的画廊地址列表文件，每行一个url。(不能与参数-url同时使用)")
-	flag.StringVar(&listFile, "l", "", "待下载的画廊地址列表文件，每行一个url。(不能与参数-url同时使用)")
-	flag.BoolVar(&update, "update", false, "更新全部已下载的漫画，不能与其他任何参数一起使用")
-}
-
 func getExecutionTime(startTime time.Time, endTime time.Time) string {
 	//按时:分:秒格式输出
 	duration := endTime.Sub(startTime)
@@ -126,72 +114,75 @@ func getExecutionTime(startTime time.Time, endTime time.Time) string {
 }
 
 func main() {
-	//版本信息
-	args := os.Args
-	//--version 或 -v
-	if len(args) == 2 && (args[1] == "--version" || args[1] == "-v") {
-		fmt.Printf("Version: %s \n", version)
-		fmt.Printf("Build TimeStamp: %s \n", buildTime)
-		fmt.Printf("GoLang Version: %s \n", goVersion)
-		os.Exit(0)
-	}
-
-	var galleryUrlList []string
-	//解析flag参数
-	initArgsParse()
-	flag.Parse()
-
-	switch {
-	case update:
-		galleryUrlList = getDownLoadedGalleryUrl()
-	case galleryUrl == "" && listFile == "":
-		fmt.Println("本程序为命令行程序，请在命令行中运行参数-h以查看帮助")
-		os.Exit(-1)
-	case galleryUrl != "" && listFile != "":
-		fmt.Println("参数错误，请在命令行中运行参数-h以查看帮助")
-		os.Exit(-1)
-	case listFile != "":
-		UrlList, err := utils.ReadListFile(listFile)
-		utils.ErrorCheck(err)
-		//UrlList... 使用了展开操作符（...），将 UrlList 切片中的所有元素一个一个地展开，作为参数传递给 append 函数
-		galleryUrlList = append(galleryUrlList, UrlList...)
-	case galleryUrl != "":
-		galleryUrlList = append(galleryUrlList, galleryUrl)
-	default:
-		log.Fatal("未知错误")
-	}
-
-	//记录开始时间
-	startTime := time.Now()
-
-	//创建下载器
-	downloader := GalleryDownloader{}
 	//设置输出颜色
-	success := color.New(color.Bold, color.FgGreen).FprintlnFunc()
-	fail := color.New(color.Bold, color.FgRed).FprintlnFunc()
+	successColor := color.New(color.Bold, color.FgGreen).FprintlnFunc()
+	failColor := color.New(color.Bold, color.FgRed).FprintlnFunc()
 	errCount := 0
-	for _, url := range galleryUrlList {
-		success(os.Stdout, "开始下载gallery:", url)
-		err := downloader.Download(infoJsonPath, url, onlyInfo)
-		if err != nil {
-			fail(os.Stderr, "下载失败:", err, "\n")
-			errCount++
-			continue
-		}
-		success(os.Stdout, "gallery下载完毕:", url, "\n")
-	}
 
-	//清理临时文件
-	err := client.CleanChromedpTemp()
+	app := &cli.App{
+		Name:      "ComicCrawler",
+		Usage:     "支持e-hentai.org,m.happymh.com,manhua.dmzj.com的漫画下载器\nGithub Link: https://github.com/gungnir762/ComicCrawler",
+		UsageText: "eg:\n	./ComicCrawler -u https://xxxxx/yyyy (-i)\neg:\n	./ComicCrawler.exe -l gallery_list.txt",
+		Version:   "0.9.0",
+		Flags: []cli.Flag{
+			&cli.BoolFlag{Name: "updateComics", Aliases: []string{"update"}, Destination: &onlyUpdate, Value: false, Usage: "更新当前文件夹下所有已下载的漫画，不能与其他任何参数一起使用"},
+			&cli.BoolFlag{Name: "info", Aliases: []string{"i"}, Destination: &onlyInfo, Value: false, Usage: "只下载画廊信息"},
+			&cli.StringFlag{Name: "url", Aliases: []string{"u"}, Destination: &galleryUrl, Value: "", Usage: "待下载的画廊地址（必填）"},
+			&cli.StringFlag{Name: "list", Aliases: []string{"l"}, Destination: &listFile, Value: "", Usage: "待下载的画廊地址列表文件，每行一个url。(不能与参数-url同时使用)"},
+		},
+		HideHelpCommand: true,
+		Action: func(c *cli.Context) error {
+			var galleryUrlList []string
+			switch {
+			case onlyUpdate:
+				galleryUrlList = getDownLoadedGalleryUrl()
+			case galleryUrl == "" && listFile == "":
+				return fmt.Errorf("本程序为命令行程序，请在命令行中运行参数-h以查看帮助")
+			case galleryUrl != "" && listFile != "":
+				return fmt.Errorf("参数错误，请在命令行中运行参数-h以查看帮助")
+			case listFile != "":
+				UrlList, err := utils.ReadListFile(listFile)
+				if err != nil {
+					return err
+				}
+				//UrlList... 使用了展开操作符（...），将 UrlList 切片中的所有元素一个一个地展开，作为参数传递给 append 函数
+				galleryUrlList = append(galleryUrlList, UrlList...)
+			case galleryUrl != "":
+				galleryUrlList = append(galleryUrlList, galleryUrl)
+			default:
+				return fmt.Errorf("未知错误")
+			}
+
+			//记录开始时间
+			startTime := time.Now()
+
+			//创建下载器
+			downloader := GalleryDownloader{}
+			for _, url := range galleryUrlList {
+				successColor(os.Stdout, "开始下载gallery:", url)
+				err := downloader.Download(infoJsonPath, url, onlyInfo)
+				if err != nil {
+					failColor(os.Stderr, "下载失败:", err, "\n")
+					errCount++
+					continue
+				}
+				successColor(os.Stdout, "gallery下载完毕:", url, "\n")
+			}
+
+			//记录结束时间
+			endTime := time.Now()
+			//计算执行时间，单位为秒
+			successColor(os.Stdout, "所有gallery下载完毕，共耗时:", getExecutionTime(startTime, endTime))
+			if errCount > 0 {
+				return fmt.Errorf("有" + cast.ToString(errCount) + "个下载失败")
+			}
+
+			return nil
+		},
+	}
+	err := app.Run(os.Args)
 	if err != nil {
-		fail(os.Stderr, "清理临时文件时出错：", err)
+		failColor(os.Stderr, err)
 	}
 
-	//记录结束时间
-	endTime := time.Now()
-	//计算执行时间，单位为秒
-	success(os.Stdout, "所有gallery下载完毕，共耗时:", getExecutionTime(startTime, endTime))
-	if errCount > 0 {
-		fail(os.Stderr, "其中有", errCount, "个下载失败")
-	}
 }
