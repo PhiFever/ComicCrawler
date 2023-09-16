@@ -121,7 +121,7 @@ func main() {
 
 	app := &cli.App{
 		Name:      "ComicCrawler",
-		Usage:     "支持e-hentai.org,m.happymh.com,manhua.dmzj.com的漫画下载器\nGithub Link: https://github.com/gungnir762/ComicCrawler",
+		Usage:     "支持e-hentai.org,m.happymh.com,manhua.dmzj.com的漫画下载器\nGithub Link: https://github.com/Gungnir762/ComicCrawler",
 		UsageText: "eg:\n	./ComicCrawler -u https://xxxxx/yyyy (-i)\neg:\n	./ComicCrawler.exe -l gallery_list.txt",
 		Version:   "0.9.0",
 		Flags: []cli.Flag{
