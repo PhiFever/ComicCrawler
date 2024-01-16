@@ -2,6 +2,7 @@
 目前支持`e-hentai.org`,`m.happymh.com`,`manhua.dmzj.com`(需要将cookies放在同级目录下的`(dmzj | happymh)_cookies.json`，可以通过EditThisCookie导出，注意调整dmzj的翻页模式，使其中的fanyemodeval=2)
 ## TODO
 1. dmzj目录带分页的情况无法处理（或许应该使用chromedp模拟点击处理，不过这种情况比较少，暂时懒得改了:)）
+2. 对已失效的链接做处理，如`https://manhua.idmzj.com/gubangbangdamaoxian/`
 ## 缓存文件格式
 `galleryInfo.json`
 

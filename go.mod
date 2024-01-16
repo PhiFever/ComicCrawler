@@ -4,14 +4,14 @@ go 1.21
 
 require (
 	github.com/PuerkitoBio/goquery v1.8.1
-	github.com/chromedp/cdproto v0.0.0-20231019002500-864b42864d36
+	github.com/chromedp/cdproto v0.0.0-20240102194822-c006b26f21c7
 	github.com/chromedp/chromedp v0.9.3
 	github.com/fatih/color v1.16.0
 	github.com/gocolly/colly/v2 v2.1.0
 	github.com/smallnest/chanx v1.1.0
-	github.com/spf13/cast v1.5.1
+	github.com/spf13/cast v1.6.0
 	github.com/stretchr/testify v1.8.4
-	github.com/urfave/cli/v2 v2.25.7
+	github.com/urfave/cli/v2 v2.27.1
 )
 
 require (
