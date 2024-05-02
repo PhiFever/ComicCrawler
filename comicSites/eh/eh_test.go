@@ -2,8 +2,8 @@ package eh
 
 import (
 	"fmt"
-	"github.com/gocolly/colly/v2"
 	"github.com/stretchr/testify/assert"
+	"github.com/ybbus/httpretry"
 	"testing"
 )
 
@@ -26,8 +26,10 @@ func Test_getGalleryInfo(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
+		c := httpretry.NewDefaultClient()
 		t.Run(tc.url, func(t *testing.T) {
-			galleryInfo := getGalleryInfo(tc.url)
+			//galleryInfo := getGalleryInfo(tc.url)
+			galleryInfo := getGalleryInfo(c, tc.url)
 			assert.Equal(t, tc.expectedGalleryInfo, galleryInfo)
 		})
 	}
@@ -57,9 +59,8 @@ func Test_generateIndexURL(t *testing.T) {
 	}
 }
 
-func Test_getAllImagePageUrl(t *testing.T) {
+func Test_getImagePageUrlList(t *testing.T) {
 	type args struct {
-		c        *colly.Collector
 		indexUrl string
 	}
 	tests := []struct {
@@ -70,7 +71,6 @@ func Test_getAllImagePageUrl(t *testing.T) {
 		{
 			name: "流浪地球2电影制作手记",
 			args: args{
-				c:        colly.NewCollector(),
 				indexUrl: "https://e-hentai.org/g/2569708/4bd9316841/",
 			},
 			want: []string{
@@ -81,9 +81,11 @@ func Test_getAllImagePageUrl(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
+		c := httpretry.NewDefaultClient()
 		t.Run(tt.name, func(t *testing.T) {
-			got := getImagePageUrlList(tt.args.c, tt.args.indexUrl)[0:4]
-			assert.Equalf(t, tt.want, got, "getImagePageUrlList(%v, %v)", tt.args.c, tt.args.indexUrl)
+			//got := getImagePageUrlList(tt.args.c, tt.args.indexUrl)[0:4]
+			got := getImagePageUrlList(c, tt.args.indexUrl)[0:4]
+			assert.Equalf(t, tt.want, got, "getImagePageUrlList(%v)", tt.args.indexUrl)
 		})
 	}
 }

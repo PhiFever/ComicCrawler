@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
+	"github.com/carlmjohnson/requests"
 	"github.com/chromedp/cdproto/network"
 	"github.com/gocolly/colly/v2"
 	"github.com/smallnest/chanx"
@@ -27,6 +28,11 @@ const (
 	BatchSize         = 10 //每次下载的图片页面数量，建议为numWorkers的整数倍
 	MaxImageInOnePage = 30 //单个图片页中最大图片数量，用于初始化imageInfoChannelSize，设置一个合适的数量可以减少无限有缓冲channel的扩容消耗
 )
+
+type ImageInfo struct {
+	Title string
+	Url   string
+}
 
 func ErrorCheck(err error) {
 	if err != nil {
@@ -261,8 +267,61 @@ func SaveImages(JPEGCollector *colly.Collector, imageInfoList []map[string]strin
 	}
 }
 
+// SaveImagesWithRequest 通过requests库更方便的保存imageInfoList中的所有图片
+func SaveImagesWithRequest(c *http.Client, h http.Header, imageInfoList []ImageInfo, saveDir string) {
+	dir, err := filepath.Abs(saveDir)
+	ErrorCheck(err)
+	err = os.MkdirAll(dir, os.ModePerm)
+	ErrorCheck(err)
+
+	for _, data := range imageInfoList {
+		filePath, err := filepath.Abs(filepath.Join(dir, data.Title))
+		ErrorCheck(err)
+		err = requests.
+			URL(data.Url).
+			Client(c).
+			ToFile(filePath).
+			Headers(h).
+			Fetch(context.Background())
+		if err != nil {
+			fmt.Println("Error saving image:", err)
+		} else {
+			fmt.Println("Image saved:", data.Title)
+		}
+		time.Sleep(time.Millisecond * time.Duration(client.DelayMs))
+	}
+
+}
+
+// SaveImagesNew 保存imageInfoList中的所有图片，重构ImageInfo为结构体参数
+func SaveImagesNew(JPEGCollector *colly.Collector, imageInfoList []ImageInfo, saveDir string) {
+	dir, err := filepath.Abs(saveDir)
+	err = os.MkdirAll(dir, os.ModePerm)
+	ErrorCheck(err)
+
+	var imageContent []byte
+	JPEGCollector.OnResponse(func(r *colly.Response) {
+		imageContent = r.Body
+	})
+
+	for _, data := range imageInfoList {
+		filePath, err := filepath.Abs(filepath.Join(dir, data.Title))
+		ErrorCheck(err)
+		err = JPEGCollector.Request("GET", data.Url, nil, nil, nil)
+		ErrorCheck(err)
+		//增加延时，防止被ban
+		time.Sleep(time.Millisecond * time.Duration(client.DelayMs))
+		err = SaveFile(filePath, imageContent)
+		if err != nil {
+			fmt.Println("Error saving image:", err)
+		} else {
+			fmt.Println("Image saved:", filePath)
+		}
+	}
+}
+
 // ExtractSubstringFromText 按照Pattern在text里匹配，找到了就返回匹配到的部分
-func ExtractSubstringFromText(pattern string, text string) (string, error) {
+func ExtractSubstringFromText(pattern string, text string) (number string, err error) {
 	regex, err := regexp.Compile(pattern)
 	if err != nil {
 		return "", err
@@ -270,7 +329,7 @@ func ExtractSubstringFromText(pattern string, text string) (string, error) {
 
 	match := regex.FindStringSubmatch(text)
 	if match != nil {
-		number := match[1]
+		number = match[1]
 		return number, nil
 	} else {
 		return "", fmt.Errorf("在pattern中未找到匹配的数字")
