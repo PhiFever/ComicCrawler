@@ -32,6 +32,7 @@ const (
 type ImageInfo struct {
 	Title string
 	Url   string
+	Refer string
 }
 
 func ErrorCheck(err error) {
@@ -260,9 +261,9 @@ func SaveImages(JPEGCollector *colly.Collector, imageInfoList []map[string]strin
 		time.Sleep(time.Millisecond * time.Duration(client.DelayMs))
 		err = SaveFile(filePath, imageContent)
 		if err != nil {
-			fmt.Println("Error saving image:", err)
+			log.Printf("Error saving image: %s by error %v", filePath, err)
 		} else {
-			fmt.Println("Image saved:", filePath)
+			log.Println("Image saved:", filePath)
 		}
 	}
 }
@@ -284,9 +285,9 @@ func SaveImagesWithRequest(c *http.Client, h http.Header, imageInfoList []ImageI
 			Headers(h).
 			Fetch(context.Background())
 		if err != nil {
-			fmt.Println("Error saving image:", err)
+			log.Printf("Error saving image: %s by error %v", data.Title, err)
 		} else {
-			fmt.Println("Image saved:", data.Title)
+			log.Println("Image saved:", data.Title)
 		}
 		time.Sleep(time.Millisecond * time.Duration(client.DelayMs))
 	}
@@ -313,9 +314,9 @@ func SaveImagesNew(JPEGCollector *colly.Collector, imageInfoList []ImageInfo, sa
 		time.Sleep(time.Millisecond * time.Duration(client.DelayMs))
 		err = SaveFile(filePath, imageContent)
 		if err != nil {
-			fmt.Println("Error saving image:", err)
+			log.Printf("Error saving image: %s by error %v", data.Title, err)
 		} else {
-			fmt.Println("Image saved:", filePath)
+			log.Println("Image saved:", filePath)
 		}
 	}
 }

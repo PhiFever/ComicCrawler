@@ -3,9 +3,9 @@ module ComicCrawler
 go 1.21
 
 require (
-	github.com/PuerkitoBio/goquery v1.9.1
+	github.com/PuerkitoBio/goquery v1.9.2
 	github.com/carlmjohnson/requests v0.23.5
-	github.com/chromedp/cdproto v0.0.0-20240426225625-909263490071
+	github.com/chromedp/cdproto v0.0.0-20240501202034-ef67d660e9fd
 	github.com/chromedp/chromedp v0.9.5
 	github.com/fatih/color v1.16.0
 	github.com/gocolly/colly/v2 v2.1.0
@@ -40,9 +40,9 @@ require (
 	github.com/saintfish/chardet v0.0.0-20230101081208-5e3ef4b5456d // indirect
 	github.com/temoto/robotstxt v1.1.2 // indirect
 	github.com/xrash/smetrics v0.0.0-20240312152122-5f08fbb34913 // indirect
-	golang.org/x/net v0.21.0 // indirect
-	golang.org/x/sys v0.17.0 // indirect
-	golang.org/x/text v0.14.0 // indirect
+	golang.org/x/net v0.26.0 // indirect
+	golang.org/x/sys v0.21.0 // indirect
+	golang.org/x/text v0.16.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
 	google.golang.org/protobuf v1.33.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect

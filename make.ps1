@@ -1,1 +1,0 @@
-go build -ldflags "-X 'ComicCrawler/client.DebugMode=0'" -o ComicCrawler.exe main.go

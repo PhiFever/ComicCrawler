@@ -12,6 +12,7 @@ import (
 	"github.com/ybbus/httpretry"
 	"log"
 	"math"
+	"math/rand/v2"
 	"net/http"
 	"net/url"
 	"path/filepath"
@@ -49,6 +50,26 @@ func generateIndexURL(urlStr string, page int) string {
 	return u.String()
 }
 
+func buildHtmlRequestHeaders() http.Header {
+	return http.Header{
+		"Accept":                    {"text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7"},
+		"Accept-Language":           {"zh-CN,zh;q=0.9,en;q=0.8"},
+		"Cache-Control":             {"no-cache"},
+		"Dnt":                       {"1"},
+		"Pragma":                    {"no-cache"},
+		"Priority":                  {"u=0, i"},
+		"Sec-Ch-Ua":                 {`"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"`},
+		"Sec-Ch-Ua-Mobile":          {"?0"},
+		"Sec-Ch-Ua-Platform":        {`"Windows"`},
+		"Sec-Fetch-Dest":            {"document"},
+		"Sec-Fetch-Mode":            {"navigate"},
+		"Sec-Fetch-Site":            {"none"},
+		"Sec-Fetch-User":            {"?1"},
+		"Sec-Gpc":                   {"1"},
+		"Upgrade-Insecure-Requests": {"1"},
+		"User-Agent":                {client.ChromeUserAgent},
+	}
+}
 func getGalleryInfo(c *http.Client, galleryUrl string) GalleryInfo {
 	var galleryInfo GalleryInfo
 	galleryInfo.TagList = make(map[string][]string)
@@ -57,7 +78,7 @@ func getGalleryInfo(c *http.Client, galleryUrl string) GalleryInfo {
 	var buffer bytes.Buffer
 	err := requests.URL(galleryUrl).
 		Client(c).
-		UserAgent(client.ChromeUserAgent).
+		Headers(buildHtmlRequestHeaders()).
 		ToBytesBuffer(&buffer).
 		Fetch(context.Background())
 	if err != nil {
@@ -144,11 +165,10 @@ func buildJPEGRequestHeaders() http.Header {
 		"Accept-Language":    {"zh-CN,zh;q=0.9"},
 		"Connection":         {"keep-alive"},
 		"Dnt":                {"1"},
-		"Host":               {"dqoaprm.qgankvrkxxiw.hath.network"},
 		"Referer":            {"https://e-hentai.org/"},
-		"Sec-Ch-Ua":          {"\"Not/A)Brand\";v=\"99\", \"Google Chrome\";v=\"115\", \"Chromium\";v=\"115\""},
+		"Sec-Ch-Ua":          {`"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"`},
 		"Sec-Ch-Ua-Mobile":   {"?0"},
-		"Sec-Ch-Ua-Platform": {"\"Windows\""},
+		"Sec-Ch-Ua-Platform": {`"Windows"`},
 		"Sec-Fetch-Dest":     {"image"},
 		"Sec-Fetch-Mode":     {"no-cors"},
 		"Sec-Fetch-Site":     {"cross-site"},
@@ -186,12 +206,13 @@ func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) erro
 		}),
 	)
 
-	//获取画廊信息
-	galleryInfo := getGalleryInfo(c, galleryUrl)
+	//获取画廊信息，快速判断网络联通情况
+	galleryInfo := getGalleryInfo(&http.Client{}, galleryUrl)
 	fmt.Println("Total Image:", galleryInfo.TotalImage)
 	safeTitle := utils.ToSafeFilename(galleryInfo.Title)
 	fmt.Println(safeTitle)
 
+	//FIXME:处理此逻辑不应该通过检测数量的方法
 	if utils.FileExists(filepath.Join(safeTitle, infoJsonPath)) {
 		fmt.Println("发现下载记录")
 		//获取已经下载的图片数量
@@ -227,7 +248,7 @@ func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) erro
 	for i := beginIndex; i < sumPage; i++ {
 		fmt.Println("\nCurrent index:", i)
 		indexUrl := generateIndexURL(galleryUrl, i)
-		fmt.Println(indexUrl)
+		log.Printf("Current index url: %s", indexUrl)
 		var imagePageUrlList []string
 		//imagePageUrlList = getImagePageUrlList(collector, indexUrl)
 		imagePageUrlList = getImagePageUrlList(c, indexUrl)
@@ -245,8 +266,8 @@ func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) erro
 				Url:   imageUrl,
 			})
 		}
-		//防止被ban，每处理一篇目录就sleep 5-10 seconds
-		sleepTime := client.TrueRandFloat(5, 10)
+		//防止被ban，每处理一篇目录就sleep 3-5 seconds
+		sleepTime := rand.Float64()*3 + 2
 		log.Println("Sleep ", cast.ToString(sleepTime), " seconds...")
 		time.Sleep(time.Duration(sleepTime) * time.Second)
 
@@ -254,8 +275,8 @@ func DownloadGallery(infoJsonPath string, galleryUrl string, onlyInfo bool) erro
 		//utils.SaveImagesNew(collector, imageInfoList, safeTitle)
 		utils.SaveImagesWithRequest(c, buildJPEGRequestHeaders(), imageInfoList, safeTitle)
 
-		//防止被ban，每保存一篇目录中的所有图片就sleep 5-15 seconds
-		sleepTime = client.TrueRandFloat(5, 15)
+		//防止被ban，每保存一篇目录中的所有图片就sleep 3-5 seconds
+		sleepTime = rand.Float64()*3 + 2
 		log.Println("Sleep ", cast.ToString(sleepTime), " seconds...")
 		time.Sleep(time.Duration(sleepTime) * time.Second)
 	}
